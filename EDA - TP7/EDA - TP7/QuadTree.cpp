@@ -1,10 +1,11 @@
 #include "QuadTree.h"
 #include "lodepng.h"
+#include <iostream>
 #include <math.h>
 
 namespace {
 	const unsigned char alfa = 99;
-	const float threshold = 100;
+	const float threshold = 0;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
 }
@@ -30,7 +31,7 @@ QuadTree::QuadTree(const char* fileName) {
 bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 	if (v.size() <= 1)
 		return true;
-	if (v.size() < 4)
+	if (v.size() < bytesPerPixel)
 		throw std::exception("lessThanThreshold got an invalid input.");
 
 	std::vector<unsigned int> rgb = std::vector<unsigned int>(v.begin(), v.begin() + bytesPerPixel - 1);
@@ -60,7 +61,7 @@ bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 	for (int i = 0; i < bytesPerPixel - 1; i++) {
 		temp += maxrgb[i] - minrgb[i];
 	}
-	if (temp < threshold) {
+	if (temp <= threshold) {
 		for (int i = 0; i < bytesPerPixel - 1; i++)
 			mean[i] = rgb[i] / (v.size() / bytesPerPixel);
 		result = true;
@@ -69,18 +70,22 @@ bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 }
 
 void QuadTree::encode(const char* fileName) {
-	unsigned char* updatedImg = (unsigned char*)malloc(tree.size() * sizeof(unsigned char));
+	unsigned char* updatedImg = (unsigned char*)malloc((tree.size() + 1) * sizeof(unsigned char));
 	if (!updatedImg)
 		throw std::exception("Failed to allocate memory for compressed image.");
+	updatedImg[0] = originalHeight * originalWidth;
 	for (unsigned int i = 0; i < tree.size(); i++) {
-		updatedImg[i] = tree.at(i);
+		updatedImg[i + 1] = tree.at(i);
 	}
 	lodepng_encode32_file(fileName, updatedImg, tree.size() / 2, tree.size() / 2);
 
 	free(updatedImg);
 }
 
-void QuadTree::startCompression(void) { compress(originalData); }
+void QuadTree::compressAndSave(const char* fileName) {
+	compress(originalData);
+	encode(fileName);
+}
 void QuadTree::compress(const std::vector<unsigned int>& v) {
 	unsigned int size = v.size();
 
@@ -112,6 +117,8 @@ void QuadTree::compress(const std::vector<unsigned int>& v) {
 	}
 }
 
+void QuadTree::decompress();
+
 const std::vector<unsigned int>& QuadTree::getOriginalData(void) const { return originalData; }
 const std::vector<int>& QuadTree::getTree(void) const { return tree; }
 
@@ -126,8 +133,9 @@ const std::vector<unsigned int> QuadTree::cutVector(const std::vector<unsigned i
 	unsigned int halfCol = (unsigned int)(sqrt(v.size() * bytesPerPixel) / 2);
 	unsigned int halfRow = halfCol / bytesPerPixel;
 
-	row = which * bytesPerPixel / (halfCol * 2);
-	col = (which % (halfCol * 2 / bytesPerPixel)) * bytesPerPixel;
+	row = (which / 2) * halfRow;
+	col = (which % 2) * halfCol;
+
 	std::vector <unsigned int> temp;
 
 	for (unsigned int i = row; i < row + halfRow; i++) {

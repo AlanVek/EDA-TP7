@@ -9,12 +9,12 @@ public:
 	const std::vector<unsigned int>& getOriginalData(void) const;
 	const std::vector<int>& getTree(void) const;
 
-	void encode(const char*);
-
 	~QuadTree();
-	void startCompression(void);
+	void compressAndSave(const char*);
 
 private:
+	void encode(const char*);
+
 	void compress(const std::vector<unsigned int>&);
 
 	const std::vector<unsigned int> cutVector(const std::vector<unsigned int>&, int);
