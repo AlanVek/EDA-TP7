@@ -5,7 +5,7 @@
 
 namespace {
 	const unsigned char alfa = 99;
-	const float threshold = 0;
+	const float threshold = 500;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
 
@@ -152,13 +152,12 @@ void QuadTree::decompressAndSave(const char* in, const char* out) {
 	decompressed.clear();
 	decodeCompressed(in);
 	decompress(originalData);
-	//encodeRaw(out);
+	encodeRaw(out);
 }
 
 void QuadTree::decompress(std::vector<unsigned char>& v) {
 	unsigned int size = v.size();
 
-	static int level = 0;
 	static std::list<int> absPosit;
 
 	if (!size) {
@@ -166,28 +165,56 @@ void QuadTree::decompress(std::vector<unsigned char>& v) {
 	}
 	else if (!v[0]) {
 		int temp[] = { v[1], v[2], v[3] };
-		fillCompressedVector(temp, level, absPosit);
-		v = std::vector<unsigned char>(v.begin() + bytesPerPixel, v.end());
+		fillCompressedVector(temp, absPosit);
+		v = std::vector<unsigned char>(v.begin() + bytesPerPixel - 1, v.end());
 	}
 	else if (v[0] == 1) {
 		std::vector<unsigned char> temp;
-		level++;
 		for (int i = 0; i < divide; i++) {
 			temp = std::vector<unsigned char>(v.begin() + 1, v.end());
 			absPosit.push_back(i);
 			decompress(temp);
+			v = temp;
 			absPosit.pop_back();
 		}
-		level--;
 	}
 	else
 		throw std::exception("Decompress got an invalid input.");
 }
 
-void QuadTree::fillCompressedVector(int* rgb, int level, const std::list<int>& absPosit) {
-	std::cout << "Level: " << level << std::endl;
+void QuadTree::fillCompressedVector(int* rgb, const std::list<int>& absPosit) {
+	/*std::cout << "Level: " << level << std::endl;
 	std::cout << "Position: ";
-	print(absPosit);
+	print(absPosit);*/
+	unsigned int level = absPosit.size();
+	unsigned int size = decompressed.size() / pow(divide, level);
+	unsigned int newWidth = sqrt(size * bytesPerPixel);
+	unsigned int newHeight = newWidth / bytesPerPixel;
+	unsigned int initCol = 0;
+	unsigned int initRow = 0;
+	unsigned int tempSize;
+	unsigned int counter = 0;
+	unsigned int halfCol, halfRow;
+	for (const auto& x : absPosit) {
+		tempSize = decompressed.size() / pow(divide, counter);
+		counter++;
+		halfCol = (sqrt(tempSize * bytesPerPixel) / 2);
+		halfRow = halfCol / bytesPerPixel;
+		initCol += (x % 2) * halfCol;
+		initRow += (x / 2) * halfRow;
+	}
+	unsigned int iter = 0;
+	for (unsigned int i = initRow; i < initRow + newHeight; i++) {
+		for (unsigned int j = initCol; j < initCol + newWidth; j++) {
+			if (iter == (bytesPerPixel - 1)) {
+				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = alfa;
+				iter = -1;
+			}
+			else
+				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = rgb[iter];
+			iter++;
+		}
+	}
 }
 
 const std::vector<unsigned char>& QuadTree::getOriginalData(void) const { return originalData; }

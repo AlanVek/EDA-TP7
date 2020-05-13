@@ -23,7 +23,7 @@ private:
 	void decodeCompressed(const char*);
 	void decodeRaw(const char*);
 
-	void fillCompressedVector(int*, int, const std::list<int>&);
+	void fillCompressedVector(int*, const std::list<int>&);
 
 	void compress(const std::vector<unsigned char>&);
 	void decompress(std::vector<unsigned char>&);
