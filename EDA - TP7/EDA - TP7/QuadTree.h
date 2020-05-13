@@ -19,6 +19,7 @@ public:
 
 private:
 	void encodeCompressed(const char*);
+	unsigned int findNearestMultiple(unsigned int);
 	void encodeRaw(const char*);
 	void decodeCompressed(const char*);
 	void decodeRaw(const char*);

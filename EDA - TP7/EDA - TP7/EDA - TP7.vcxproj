@@ -148,9 +148,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EDA - TP7.cpp" />
+    <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="QuadTree.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="lodepng.h" />
+    <ClInclude Include="lodepng_util.h" />
     <ClInclude Include="QuadTree.h" />
   </ItemGroup>
   <ItemGroup>

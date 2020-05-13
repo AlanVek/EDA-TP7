@@ -2,9 +2,9 @@
 #include "QuadTree.h"
 
 int main() {
-	const char* in = "myImg.png";
-	const char* out = "myImg2BIG.EDA";
-	const char* in2 = "myImg2_decompBIG.png";
+	const char* in = "grid.png";
+	const char* out = "grid2.EDA";
+	const char* in2 = "grid3.png";
 
 	try {
 		QuadTree qt;
