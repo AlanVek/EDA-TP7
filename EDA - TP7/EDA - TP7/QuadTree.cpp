@@ -2,31 +2,18 @@
 #include "lodepng.h"
 #include <iostream>
 #include <math.h>
+#include <fstream>
 
 namespace {
 	const unsigned char alfa = 99;
 	const float threshold = 0;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
-}
 
-//auto print = [](const auto& iter) { for (const auto& x : iter)std::cout << x << ' '; std::cout << std::endl; };
+	const unsigned int maxNumber = 255;
+}
 
 QuadTree::QuadTree() { mean = { 0,0,0 }; }
-
-QuadTree::QuadTree(const char* fileName) {
-	mean = { 0,0,0 };
-	unsigned char* img;
-	lodepng_decode32_file(&img, &originalWidth, &originalHeight, fileName);
-	originalWidth *= bytesPerPixel;
-	for (unsigned int i = 0; i < originalWidth * originalHeight; i++) {
-		if (i % bytesPerPixel != (bytesPerPixel - 1))
-			originalData.push_back((unsigned int)img[i]);
-		else
-			originalData.push_back(alfa);
-	}
-	free(img);
-}
 
 bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 	if (v.size() <= 1)
@@ -69,32 +56,51 @@ bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 	return result;
 }
 
-void QuadTree::encode(const char* fileName) {
-	unsigned char* updatedImg = (unsigned char*)malloc((tree.size() + 1) * sizeof(unsigned char));
+void QuadTree::encodeCompressed(const char* fileName) {
+	std::fstream out;
+	out.open(fileName, std::ios::out | std::ios::binary);
+
+	if (!out.is_open()) {
+		out.close();
+		throw std::exception("Failed to create output file.");
+	}
+
+	out << width * height << '\n';
+	for (const unsigned int& code : tree) {
+		out << code << '\n';
+	}
+	out.close();
+}
+
+void QuadTree::encodeRaw(const char* fileName) {
+	unsigned char* updatedImg = (unsigned char*)malloc(decompressed.size() * sizeof(unsigned char));
 	if (!updatedImg)
 		throw std::exception("Failed to allocate memory for compressed image.");
-	updatedImg[0] = originalHeight * originalWidth;
-	for (unsigned int i = 0; i < tree.size(); i++) {
-		updatedImg[i + 1] = tree.at(i);
+
+	for (unsigned int i = 0; i < decompressed.size(); i++) {
+		updatedImg[i] = decompressed.at(i);
 	}
-	lodepng_encode32_file(fileName, updatedImg, tree.size() / 2, tree.size() / 2);
+	lodepng_encode32_file(fileName, updatedImg, sqrt(decompressed.size() / bytesPerPixel), sqrt(decompressed.size() / bytesPerPixel));
 
 	free(updatedImg);
 }
 
-void QuadTree::compressAndSave(const char* fileName) {
+void QuadTree::compressAndSave(const char* in, const char* out) {
+	originalData.clear();
+	tree.clear();
+	decodeRaw(in);
 	compress(originalData);
-	encode(fileName);
+	encodeCompressed(out);
 }
 void QuadTree::compress(const std::vector<unsigned int>& v) {
 	unsigned int size = v.size();
 
-	if ((int)log2(originalWidth / bytesPerPixel) != log2(originalWidth / bytesPerPixel))
+	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
 		throw std::exception("Width not in form of 2^n.");
-	if ((int)log2(originalHeight) != log2(originalHeight))
+	if ((int)log2(height) != log2(height))
 		throw std::exception("Height not in form of 2^n.");
 
-	if (originalWidth / bytesPerPixel != originalHeight)
+	if (width / bytesPerPixel != height)
 		throw std::exception("Image should be square.");
 	else if (size < divide) {
 		throw std::exception("Something weird happened");
@@ -117,10 +123,84 @@ void QuadTree::compress(const std::vector<unsigned int>& v) {
 	}
 }
 
-void QuadTree::decompress();
+void QuadTree::decodeRaw(const char* fileName) {
+	unsigned char* img;
+	lodepng_decode32_file(&img, &width, &height, fileName);
+
+	width *= bytesPerPixel;
+
+	originalData.clear();
+	for (unsigned int i = 0; i < width * height; i++) {
+		if (i % bytesPerPixel != (bytesPerPixel - 1))
+			originalData.push_back((unsigned int)img[i]);
+		else
+			originalData.push_back(alfa);
+	}
+	free(img);
+}
+
+void QuadTree::decodeCompressed(const char* fileName) {
+	std::fstream in;
+	in.open(fileName, std::ios::in | std::ios::binary);
+
+	if (!in.is_open()) {
+		in.close();
+		throw std::exception("Failed to read input file.");
+	}
+
+	unsigned int size;
+	unsigned int temp;
+	in >> size;
+	decompressed = std::vector<unsigned int>(size);
+	in >> temp;
+	while (!in.eof()) {
+		originalData.push_back(temp);
+		in >> temp;
+	}
+	in.close();
+}
+
+void QuadTree::decompressAndSave(const char* in, const char* out) {
+	originalData.clear();
+	decompressed.clear();
+	decodeCompressed(in);
+	//decompress(originalData);
+	//encodeRaw(out);
+}
+
+void QuadTree::decompress(const std::vector<unsigned int>& v) {
+	unsigned int size = v.size();
+
+	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
+		throw std::exception("Width not in form of 2^n.");
+	if ((int)log2(height) != log2(height))
+		throw std::exception("Height not in form of 2^n.");
+
+	if (width / bytesPerPixel != height)
+		throw std::exception("Image should be square.");
+	else if (size < divide) {
+		throw std::exception("Something weird happened");
+	}
+	else if (size == bytesPerPixel) {
+		tree.push_back(0);
+		for (int i = 0; i < bytesPerPixel - 1; i++)
+			tree.push_back(v.at(i));
+	}
+	else if (lessThanThreshold(v)) {
+		tree.push_back(0);
+		for (int i = 0; i < bytesPerPixel - 1; i++)
+			tree.push_back(mean.at(i));
+	}
+	else {
+		tree.push_back(1);
+		for (int i = 0; i < divide; i++) {
+			compress(cutVector(v, i));
+		}
+	}
+}
 
 const std::vector<unsigned int>& QuadTree::getOriginalData(void) const { return originalData; }
-const std::vector<int>& QuadTree::getTree(void) const { return tree; }
+const std::vector<unsigned int>& QuadTree::getTree(void) const { return tree; }
 
 QuadTree::~QuadTree() {}
 
