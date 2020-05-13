@@ -156,36 +156,36 @@ void QuadTree::decompressAndSave(const char* in, const char* out) {
 	//encodeRaw(out);
 }
 
-void QuadTree::decompress(const std::vector<unsigned char>& v) {
-	unsigned int size = v.size();
-
-	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
-		throw std::exception("Width not in form of 2^n.");
-	if ((int)log2(height) != log2(height))
-		throw std::exception("Height not in form of 2^n.");
-
-	if (width / bytesPerPixel != height)
-		throw std::exception("Image should be square.");
-	else if (size < divide) {
-		throw std::exception("Something weird happened");
-	}
-	else if (size == bytesPerPixel) {
-		tree.push_back(0);
-		for (int i = 0; i < bytesPerPixel - 1; i++)
-			tree.push_back(v.at(i));
-	}
-	else if (lessThanThreshold(v)) {
-		tree.push_back(0);
-		for (int i = 0; i < bytesPerPixel - 1; i++)
-			tree.push_back(mean.at(i));
-	}
-	else {
-		tree.push_back(1);
-		for (int i = 0; i < divide; i++) {
-			compress(cutVector(v, i));
-		}
-	}
-}
+//void QuadTree::decompress(const std::vector<unsigned char>& v) {
+//	unsigned int size = v.size();
+//
+//	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
+//		throw std::exception("Width not in form of 2^n.");
+//	if ((int)log2(height) != log2(height))
+//		throw std::exception("Height not in form of 2^n.");
+//
+//	if (width / bytesPerPixel != height)
+//		throw std::exception("Image should be square.");
+//	else if (size < divide) {
+//		throw std::exception("Something weird happened");
+//	}
+//	else if (size == bytesPerPixel) {
+//		tree.push_back(0);
+//		for (int i = 0; i < bytesPerPixel - 1; i++)
+//			tree.push_back(v.at(i));
+//	}
+//	else if (lessThanThreshold(v)) {
+//		tree.push_back(0);
+//		for (int i = 0; i < bytesPerPixel - 1; i++)
+//			tree.push_back(mean.at(i));
+//	}
+//	else {
+//		tree.push_back(1);
+//		for (int i = 0; i < divide; i++) {
+//			compress(cutVector(v, i));
+//		}
+//	}
+//}
 
 const std::vector<unsigned char>& QuadTree::getOriginalData(void) const { return originalData; }
 const std::vector<unsigned char>& QuadTree::getTree(void) const { return tree; }
