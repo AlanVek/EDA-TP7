@@ -4,7 +4,7 @@
 #include <math.h>
 
 namespace {
-	const unsigned char alfa = 99;
+	const unsigned char alfa = 255;
 	const float threshold = 500;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
