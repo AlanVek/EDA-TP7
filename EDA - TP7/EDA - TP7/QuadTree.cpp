@@ -57,7 +57,7 @@ bool QuadTree::lessThanThreshold(const std::vector<unsigned int>& v) {
 }
 
 void QuadTree::encodeCompressed(const char* fileName) {
-	std::fstream out;
+	/*std::fstream out;
 	out.open(fileName, std::ios::out | std::ios::binary);
 
 	if (!out.is_open()) {
@@ -69,7 +69,11 @@ void QuadTree::encodeCompressed(const char* fileName) {
 	for (const unsigned int& code : tree) {
 		out << code << '\n';
 	}
-	out.close();
+	out.close();*/
+
+	unsigned char* encoded = (unsigned char*)malloc(tree.size() * sizeof(unsigned char));
+	lodepng_encode32_file(fileName, encoded, sqrt(tree.size() / bytesPerPixel), sqrt(tree.size() / bytesPerPixel));
+	free(encoded);
 }
 
 void QuadTree::encodeRaw(const char* fileName) {
