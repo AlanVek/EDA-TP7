@@ -2,7 +2,6 @@
 #include "lodepng.h"
 #include <iostream>
 #include <math.h>
-#include <fstream>
 
 namespace {
 	const unsigned char alfa = 99;
@@ -152,40 +151,44 @@ void QuadTree::decompressAndSave(const char* in, const char* out) {
 	originalData.clear();
 	decompressed.clear();
 	decodeCompressed(in);
-	//decompress(originalData);
+	decompress(originalData);
 	//encodeRaw(out);
 }
 
-//void QuadTree::decompress(const std::vector<unsigned char>& v) {
-//	unsigned int size = v.size();
-//
-//	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
-//		throw std::exception("Width not in form of 2^n.");
-//	if ((int)log2(height) != log2(height))
-//		throw std::exception("Height not in form of 2^n.");
-//
-//	if (width / bytesPerPixel != height)
-//		throw std::exception("Image should be square.");
-//	else if (size < divide) {
-//		throw std::exception("Something weird happened");
-//	}
-//	else if (size == bytesPerPixel) {
-//		tree.push_back(0);
-//		for (int i = 0; i < bytesPerPixel - 1; i++)
-//			tree.push_back(v.at(i));
-//	}
-//	else if (lessThanThreshold(v)) {
-//		tree.push_back(0);
-//		for (int i = 0; i < bytesPerPixel - 1; i++)
-//			tree.push_back(mean.at(i));
-//	}
-//	else {
-//		tree.push_back(1);
-//		for (int i = 0; i < divide; i++) {
-//			compress(cutVector(v, i));
-//		}
-//	}
-//}
+void QuadTree::decompress(std::vector<unsigned char>& v) {
+	unsigned int size = v.size();
+
+	static int level = 0;
+	static std::list<int> absPosit;
+
+	if (!size) {
+		return;
+	}
+	else if (!v[0]) {
+		int temp[] = { v[1], v[2], v[3] };
+		fillCompressedVector(temp, level, absPosit);
+		v = std::vector<unsigned char>(v.begin() + bytesPerPixel, v.end());
+	}
+	else if (v[0] == 1) {
+		std::vector<unsigned char> temp;
+		level++;
+		for (int i = 0; i < divide; i++) {
+			temp = std::vector<unsigned char>(v.begin() + 1, v.end());
+			absPosit.push_back(i);
+			decompress(temp);
+			absPosit.pop_back();
+		}
+		level--;
+	}
+	else
+		throw std::exception("Decompress got an invalid input.");
+}
+
+void QuadTree::fillCompressedVector(int* rgb, int level, const std::list<int>& absPosit) {
+	std::cout << "Level: " << level << std::endl;
+	std::cout << "Position: ";
+	print(absPosit);
+}
 
 const std::vector<unsigned char>& QuadTree::getOriginalData(void) const { return originalData; }
 const std::vector<unsigned char>& QuadTree::getTree(void) const { return tree; }

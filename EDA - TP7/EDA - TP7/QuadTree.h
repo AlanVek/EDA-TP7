@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <list>
 
 //Just to see the vectors while testing the program.
 auto print = [](const auto& iter) { for (const auto& x : iter)std::cout << (int)x << ' '; std::cout << std::endl; };
@@ -22,8 +23,10 @@ private:
 	void decodeCompressed(const char*);
 	void decodeRaw(const char*);
 
+	void fillCompressedVector(int*, int, const std::list<int>&);
+
 	void compress(const std::vector<unsigned char>&);
-	void decompress(const std::vector<unsigned char>&);
+	void decompress(std::vector<unsigned char>&);
 
 	const std::vector<unsigned char> cutVector(const std::vector<unsigned char>&, int);
 
