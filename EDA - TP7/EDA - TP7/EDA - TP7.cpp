@@ -8,7 +8,7 @@ int main() {
 
 	try {
 		QuadTree qt;
-		qt.compressAndSave(in, out);
+		qt.compressAndSave(in, out, 250);
 		qt.decompressAndSave(out, in2);
 	}
 	catch (std::exception& e) {
