@@ -2,42 +2,37 @@
 #include <vector>
 #include <list>
 
-//Just to see the vectors while testing the program.
-auto print = [](const auto& iter) { for (const auto& x : iter)std::cout << (int)x << ' '; std::cout << std::endl; };
-
 class QuadTree {
 public:
 	QuadTree();
 
-	const std::vector<unsigned char>& getOriginalData(void) const;
-	const std::vector<unsigned char>& getTree(void) const;
-
 	~QuadTree();
-	void compressAndSave(const char*, const char*);
+	void compressAndSave(const char*, const char*, const double);
 
 	void decompressAndSave(const char*, const char*);
 
 private:
-	void encodeCompressed(const char*);
-	unsigned int findNearestMultiple(unsigned int);
-	void encodeRaw(const char*);
-	void decodeCompressed(const char*);
+
+	/*Compression*/
 	void decodeRaw(const char*);
-
-	void fillCompressedVector(int*, const std::list<int>&);
-
+	void encodeCompressed(const char*);
+	unsigned int findNearestMultiple(unsigned int, unsigned int);
 	void compress(const std::vector<unsigned char>&);
-	void decompress(std::vector<unsigned char>&);
-
 	const std::vector<unsigned char> cutVector(const std::vector<unsigned char>&, int);
-
-	QuadTree(const QuadTree&);
-
 	bool lessThanThreshold(const std::vector<unsigned char>&);
 
+	/*Decompression*/
+	void decodeCompressed(const char*);
+	void encodeRaw(const char*);
+	void fillCompressedVector(int*, const std::list<int>&);
+	void decompress(std::vector<unsigned char>&);
+
+	/*Prevents from using copy constructor.*/
+	QuadTree(const QuadTree&);
+
+	/*Data members.*/
 	std::vector<unsigned char> originalData, decompressed, tree;
-
+	double threshold;
 	unsigned int width, height;
-
 	std::vector<unsigned char> mean;
 };
