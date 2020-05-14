@@ -65,7 +65,7 @@ void QuadTree::encodeCompressed(const char* fileName) {
 	if (!encoded)
 		throw std::exception("Failed to allocate memory for output.");
 	encoded[0] = (unsigned char)log2(height);
-	for (unsigned int i = 1; i < size - tree.size() - 1; i++)
+	for (unsigned int i = 1; i < size - tree.size(); i++)
 		encoded[i] = (unsigned char)filling;
 	for (unsigned int i = 0; i < tree.size(); i++) {
 		encoded[i + size - tree.size()] = tree.at(i);
