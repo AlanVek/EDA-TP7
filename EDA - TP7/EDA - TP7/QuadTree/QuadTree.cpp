@@ -1,19 +1,20 @@
 #include "QuadTree.h"
 #include "lodepng.h"
-#include <iostream>
 #include <math.h>
 
 /*Constants to use throughout program. */
 namespace {
 	const unsigned char alfa = 255;
+	const unsigned int maxDif = 3 * 255;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
-
-	const unsigned int maxNumber = 255;
-
-	const unsigned char hasChildren = 1;
-	const unsigned char noChildren = 0;
-	const unsigned char filling = 10;
+}
+namespace treeData {
+	const enum : unsigned char {
+		hasChildren,
+		noChildren,
+		filling,
+	};
 }
 
 /*QuadTree constructor. Just sets mean and threshold to 0.*/
@@ -30,12 +31,12 @@ QuadTree::QuadTree() {
 
 /*Compresses image from input file to output file, with the given threshold. */
 void QuadTree::compressAndSave(const char* input, const char* output, const double threshold_) {
-	if (threshold_ >= 0) {
+	if (threshold_ > 0 && threshold_ <= 1) {
 		/*Clears tree.*/
 		tree.clear();
 
 		/*Sets threshold.*/
-		threshold = threshold_;
+		threshold = threshold_ * maxDif;
 
 		/*Decodes file.*/
 		decodeRaw(input);
@@ -47,7 +48,7 @@ void QuadTree::compressAndSave(const char* input, const char* output, const doub
 		encodeCompressed(output);
 	}
 	else
-		throw std::exception("Threshold must be a non-negative value.");
+		throw std::exception("Threshold must be a non-negative value between 0 and 1.");
 }
 
 /*Decodes raw data from file.*/
@@ -67,7 +68,7 @@ void QuadTree::decodeRaw(const char* fileName) {
 	/*Loads originalData with raw data from file.*/
 	originalData.clear();
 	for (unsigned int i = 0; i < width * height; i++) {
-		originalData.push_back((unsigned int)img[i]);
+		originalData.push_back(img[i]);
 	}
 
 	/*Frees resources.*/
@@ -104,7 +105,7 @@ void QuadTree::compress(const std::vector<unsigned char>& v) {
 	/*If it's only one pixel...*/
 	else if (size == bytesPerPixel) {
 		/*Loads noChildren to tree and pushes RGB code. It's a leaf.*/
-		tree.push_back(noChildren);
+		tree.push_back(treeData::noChildren);
 		for (int i = 0; i < bytesPerPixel - 1; i++)
 			tree.push_back(v.at(i));
 	}
@@ -112,7 +113,7 @@ void QuadTree::compress(const std::vector<unsigned char>& v) {
 	/*If vector's RGB formula is less than threshold...*/
 	else if (lessThanThreshold(v)) {
 		/*Loads noChildren to tree and pushes mean RGB code. It's a leaf.*/
-		tree.push_back(noChildren);
+		tree.push_back(treeData::noChildren);
 		for (int i = 0; i < bytesPerPixel - 1; i++)
 			tree.push_back(mean.at(i));
 	}
@@ -122,7 +123,7 @@ void QuadTree::compress(const std::vector<unsigned char>& v) {
 		/*It pushes hasChildren, cuts the vector in
 		'divide' parts and compresses each part separately.
 		It's an inner node.*/
-		tree.push_back(hasChildren);
+		tree.push_back(treeData::hasChildren);
 		for (int i = 0; i < divide; i++) {
 			compress(cutVector(v, i));
 		}
@@ -150,7 +151,7 @@ void QuadTree::encodeCompressed(const char* fileName) {
 	a multiple of bytesPerPixel with an arbitrary number different
 	than hasChildren and noChildren.*/
 	for (unsigned int i = 1; i < size - tree.size(); i++)
-		encoded[i] = (unsigned char)filling;
+		encoded[i] = treeData::filling;
 
 	/*Loads the rest of the array with the real compressed data.*/
 	for (unsigned int i = 0; i < tree.size(); i++) {
@@ -239,7 +240,7 @@ const std::vector<unsigned char> QuadTree::cutVector(const std::vector<unsigned 
 		return v;
 
 	/*Sets paraemeters for row and column at the half of each dimension.*/
-	unsigned int halfCol = (unsigned int)(sqrt(v.size() * bytesPerPixel) / 2);
+	unsigned int halfCol = sqrt(v.size() * bytesPerPixel) / 2;
 	unsigned int halfRow = halfCol / bytesPerPixel;
 
 	/*Sets starting row and column.*/
@@ -304,7 +305,7 @@ void QuadTree::decodeCompressed(const char* fileName) {
 
 	/*Goes to end of 'fill' portion of data.*/
 	unsigned int index = 1;
-	for (; img[index] == filling; index++) {};
+	for (; img[index] == treeData::filling; index++) {};
 
 	/*Sets real size of original image.*/
 	size = static_cast<unsigned int> (pow(pow(2, size), 2) * bytesPerPixel);
@@ -336,7 +337,7 @@ void QuadTree::decompress(std::vector<unsigned char>& v) {
 	}
 
 	/*If it found a leaf...*/
-	else if (v[0] == noChildren) {
+	else if (v[0] == treeData::noChildren) {
 		/*If the format is correct...*/
 		if (v.size() >= bytesPerPixel) {
 			int temp[bytesPerPixel - 1];
@@ -357,7 +358,7 @@ void QuadTree::decompress(std::vector<unsigned char>& v) {
 	}
 
 	/*If it found an inner node...*/
-	else if (v[0] == hasChildren) {
+	else if (v[0] == treeData::hasChildren) {
 		std::vector<unsigned char> temp;
 
 		/*Sets 'temp' to be the rest of the vector without the hasChildren parameter.*/
@@ -436,7 +437,7 @@ void QuadTree::fillDecompressedVector(int* rgb, const std::list<int>& absPosit) 
 		counter++;
 
 		/*There are new side lengths of the division.*/
-		halfCol = (sqrt(tempSize * bytesPerPixel) / 2);
+		halfCol = sqrt(tempSize * bytesPerPixel) / 2;
 		halfRow = halfCol / bytesPerPixel;
 
 		/*So the current row/column changes accordingly. */

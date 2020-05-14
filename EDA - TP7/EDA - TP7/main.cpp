@@ -1,14 +1,14 @@
 #include <iostream>
-#include "QuadTree.h"
+#include "QuadTree/QuadTree.h"
 
 int main() {
 	/*Sets test names for input and output files. */
-	const char* in = "myImg.png";
-	const char* out = "myImg2.EDA";
-	const char* in2 = "myImg3.png";
+	const char* in = "Images/logo.png";
+	const char* out = "Images/logo2.EDA";
+	const char* in2 = "Images/logo3.png";
 
 	/*Sets test threshold value. */
-	const double threshold = 0;
+	const double threshold = 0.1;
 
 	try {
 		QuadTree qt;
