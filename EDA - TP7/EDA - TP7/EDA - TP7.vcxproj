@@ -147,7 +147,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="EDA - TP7.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="QuadTree.cpp" />
   </ItemGroup>
