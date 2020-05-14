@@ -5,7 +5,7 @@
 
 namespace {
 	const unsigned char alfa = 255;
-	const float threshold = 200;
+	const float threshold = 0;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
 
@@ -13,6 +13,7 @@ namespace {
 
 	const unsigned char hasChildren = 1;
 	const unsigned char noChildren = 0;
+	const unsigned char filling = 10;
 }
 
 QuadTree::QuadTree() { mean = { 0,0,0 }; }
@@ -63,15 +64,13 @@ void QuadTree::encodeCompressed(const char* fileName) {
 	unsigned char* encoded = (unsigned char*)malloc(size * sizeof(unsigned char));
 	if (!encoded)
 		throw std::exception("Failed to allocate memory for output.");
-	encoded[0] = (unsigned char)(size - tree.size() - 1);
-	encoded[1] = (unsigned char)log2(height);
-	for (unsigned int i = 2; i < size - tree.size(); i++)
-		encoded[i] = (unsigned char)5;
+	encoded[0] = (unsigned char)log2(height);
+	for (unsigned int i = 1; i < size - tree.size() - 1; i++)
+		encoded[i] = (unsigned char)filling;
 	for (unsigned int i = 0; i < tree.size(); i++) {
 		encoded[i + size - tree.size()] = tree.at(i);
 	}
-	//if (strlen((char*)encoded) != size)
-	//	throw std::exception("Size mismatch.");
+
 	int res = lodepng_encode32_file(fileName, encoded, size / bytesPerPixel, 1);
 	if (res) {
 		std::string err = "Failed to encode compressed file: " + (std::string)lodepng_error_text(res);
@@ -159,9 +158,10 @@ void QuadTree::decodeCompressed(const char* fileName) {
 	lodepng_decode32_file(&img, &width, &height, fileName);
 	if (!img)
 		throw std::exception("lodepng_decode32_file error");
-	unsigned int cant = img[0];
-	unsigned int size = img[1];
-	unsigned int index = cant + 1;
+	width *= bytesPerPixel;
+	unsigned int size = img[0];
+	unsigned int index = 1;
+	for (; img[index] == filling; index++) {};
 
 	size = static_cast<unsigned int> (pow(pow(2, size), 2) * bytesPerPixel);
 	decompressed = std::vector<unsigned char>(size);
@@ -199,14 +199,15 @@ void QuadTree::decompress(std::vector<unsigned char>& v) {
 			v = std::vector<unsigned char>(v.begin() + move, v.end());
 		}
 		else {
-			int temp[] = { v[0], v[1], v[2] };
-			fillCompressedVector(temp, absPosit);
-			unsigned int move = bytesPerPixel;
-			/*if (*(--absPosit.end()) == (bytesPerPixel - 1))
-				move--;*/
-			v.clear();
+			//	int temp[] = { v[0], v[1], v[2] };
+			//	fillCompressedVector(temp, absPosit);
+			//	unsigned int move = bytesPerPixel;
+			//	/*if (*(--absPosit.end()) == (bytesPerPixel - 1))
+			//		move--;*/
+			//	v.clear();
+			//}
+			throw std::exception("Decompress got an invalid input.");
 		}
-		//throw std::exception("Decompress got an invalid input.");
 	}
 	else if (v[0] == hasChildren) {
 		std::vector<unsigned char> temp;

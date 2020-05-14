@@ -2,14 +2,13 @@
 #include "QuadTree.h"
 
 int main() {
-	const char* in = "grid.png";
-	const char* out = "grid2.EDA";
-	const char* in2 = "grid3.png";
+	const char* in = "myImg.png";
+	const char* out = "myImg2.EDA";
+	const char* in2 = "myImg3.png";
 
 	try {
 		QuadTree qt;
 		qt.compressAndSave(in, out);
-		//print(qt.getTree());
 		qt.decompressAndSave(out, in2);
 	}
 	catch (std::exception& e) {
