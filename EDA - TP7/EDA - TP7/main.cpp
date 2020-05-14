@@ -3,9 +3,9 @@
 
 int main() {
 	/*Sets test names for input and output files. */
-	const char* in = "logo.png";
-	const char* out = "logo2.EDA";
-	const char* in2 = "logo3.png";
+	const char* in = "myImg.png";
+	const char* out = "myImg2.EDA";
+	const char* in2 = "myImg3.png";
 
 	/*Sets test threshold value. */
 	const double threshold = 0;

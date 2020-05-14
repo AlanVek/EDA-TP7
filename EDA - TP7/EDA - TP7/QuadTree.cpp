@@ -30,20 +30,24 @@ QuadTree::QuadTree() {
 
 /*Compresses image from input file to output file, with the given threshold. */
 void QuadTree::compressAndSave(const char* input, const char* output, const double threshold_) {
-	/*Clears trees.*/
-	tree.clear();
+	if (threshold_ >= 0) {
+		/*Clears tree.*/
+		tree.clear();
 
-	/*Sets threshold.*/
-	threshold = threshold_;
+		/*Sets threshold.*/
+		threshold = threshold_;
 
-	/*Decodes file.*/
-	decodeRaw(input);
+		/*Decodes file.*/
+		decodeRaw(input);
 
-	/*Compresses file.*/
-	compress(originalData);
+		/*Compresses file.*/
+		compress(originalData);
 
-	/*Encodes compressed file.*/
-	encodeCompressed(output);
+		/*Encodes compressed file.*/
+		encodeCompressed(output);
+	}
+	else
+		throw std::exception("Threshold must be a non-negative value.");
 }
 
 /*Decodes raw data from file.*/
@@ -270,8 +274,7 @@ unsigned int QuadTree::findNearestMultiple(unsigned int number, unsigned int bas
 
 /*Decompresses the input file and saves it to output file. */
 void QuadTree::decompressAndSave(const char* input, const char* output) {
-	/*Clears data members.*/
-	originalData.clear();
+	/*Clears placeholder for decompressed data.*/
 	decompressed.clear();
 
 	/*Decodes compressed file.*/
@@ -308,6 +311,8 @@ void QuadTree::decodeCompressed(const char* fileName) {
 
 	/*Sets decompressed to correct size.*/
 	decompressed = std::vector<unsigned char>(size);
+
+	originalData.clear();
 
 	/*Loads compressed data to originalData.*/
 	for (; index < width * height; index++)
