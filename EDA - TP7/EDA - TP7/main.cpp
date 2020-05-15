@@ -16,10 +16,12 @@ int main() {
 		/*Compresses 'in' file to 'out' file. */
 		qt.compressAndSave(in, out, threshold);
 
+		std::cout << "Compression completed successfully." << std::endl;
+
 		/*Decompresses 'out' file to 'in2' file. */
 		qt.decompressAndSave(out, in2);
 
-		std::cout << "Compression and decompression completed successfully." << std::endl;
+		std::cout << "Decompression completed successfully." << std::endl;
 	}
 	catch (std::exception& e) {
 		std::cout << e.what() << std::endl;

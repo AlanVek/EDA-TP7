@@ -19,7 +19,7 @@ namespace treeData {
 
 /*QuadTree constructor. Just sets mean and threshold to 0.*/
 QuadTree::QuadTree() {
-	mean = std::vector<unsigned int>(bytesPerPixel);
+	mean = intVector(bytesPerPixel - 1);
 	threshold = NULL;
 }
 
@@ -42,7 +42,7 @@ void QuadTree::compressAndSave(const char* input, const char* output, const doub
 		decodeRaw(input);
 
 		/*Compresses file.*/
-		compress(originalData);
+		compress(originalData.begin(), width, height);
 
 		/*Encodes compressed file.*/
 		encodeCompressed(output);
@@ -76,42 +76,40 @@ void QuadTree::decodeRaw(const char* fileName) {
 		free(img);
 }
 
-/*Recursively compressed data to tree.*/
-void QuadTree::compress(const std::vector<unsigned char>& v) {
-	unsigned int size = v.size();
-
+/*Recursively compresses data to tree.*/
+void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 	/*Checks if vector is empty.*/
-	if (!size) {
+	if (!(W * H)) {
 		throw std::exception("File is empty or doesn't exist.");
 	}
 
 	/*Checks if width is a power of 2.*/
-	if ((int)log2(width / bytesPerPixel) != log2(width / bytesPerPixel))
+	if ((int)log2(W / bytesPerPixel) != log2(W / bytesPerPixel))
 		throw std::exception("Width not in form of 2^n.");
 
 	/*Checks if height is a power of 2.*/
-	if ((int)log2(height) != log2(height))
+	if ((int)log2(H) != log2(H))
 		throw std::exception("Height not in form of 2^n.");
 
 	/*Checks if vector is square*/
-	if (width / bytesPerPixel != height)
+	if (W / bytesPerPixel != H)
 		throw std::exception("Image should be square.");
 
 	/*Checks if vector has appropriate length.*/
-	else if (size < bytesPerPixel) {
+	else if (W * H < bytesPerPixel) {
 		throw std::exception("Compress got invalid input.");
 	}
 
 	/*If it's only one pixel...*/
-	else if (size == bytesPerPixel) {
+	else if (W * H == bytesPerPixel) {
 		/*Loads noChildren to tree and pushes RGB code. It's a leaf.*/
 		tree.push_back(treeData::noChildren);
-		for (int i = 0; i < bytesPerPixel - 1; i++)
-			tree.push_back(v.at(i));
+		for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
+			tree.push_back(*(start + i));
 	}
 
 	/*If vector's RGB formula is less than threshold...*/
-	else if (lessThanThreshold(v)) {
+	else if (lessThanThreshold(start, W, H)) {
 		/*Loads noChildren to tree and pushes mean RGB code. It's a leaf.*/
 		tree.push_back(treeData::noChildren);
 		for (int i = 0; i < bytesPerPixel - 1; i++)
@@ -120,12 +118,11 @@ void QuadTree::compress(const std::vector<unsigned char>& v) {
 
 	/*Otherwise...*/
 	else {
-		/*It pushes hasChildren, cuts the vector in
-		'divide' parts and compresses each part separately.
+		/*It pushes hasChildren and compresses the vector in 'divide' parts.
 		It's an inner node.*/
 		tree.push_back(treeData::hasChildren);
 		for (int i = 0; i < divide; i++) {
-			compress(cutVector(v, i));
+			compress(cutVector(start, W, H, i), W / 2, H / 2);
 		}
 	}
 }
@@ -173,42 +170,49 @@ void QuadTree::encodeCompressed(const char* fileName) {
 /*Checks if vector's RGB formula is less than threshold.
 If it is, then it returns true and saves mean values to 'mean'.
 Otherwise, it returns false.*/
-bool QuadTree::lessThanThreshold(const std::vector<unsigned char>& v) {
+bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned int H) {
 	/*Checks for correct shape.*/
-	if (v.size() < bytesPerPixel)
+	if (W * H < bytesPerPixel)
 		throw std::exception("lessThanThreshold got an invalid input.");
 
-	/*Creates variables to use in function.
+	/*
+	Creates variables to use in function:
 
-	mexrgb saves max values of rgb.
-	minrgb saves min values of rgb.*/
-	mean = std::vector<unsigned int>(v.begin(), v.begin() + bytesPerPixel - 1);
-	std::vector<unsigned int> maxrgb = mean;
-	std::vector<unsigned int> minrgb = mean;
+	- mexrgb saves max values of rgb.
+	- minrgb saves min values of rgb.
+	*/
+
+	mean = intVector(bytesPerPixel - 1);
+	intVector maxrgb = intVector(start, start + bytesPerPixel - 1);
+	intVector minrgb = maxrgb;
 	bool result = false;
-	int count = 0;
+	int count = -1;
 
-	/*Loops through vector, saving each value to the corresponding
-	position in vectors and applying the appropiate checks.*/
-	for (unsigned int i = bytesPerPixel; i < v.size(); i++) {
-		/*If it's not alpha...*/
-		if (i % bytesPerPixel != (bytesPerPixel - 1)) {
-			/*If value is higher than corresponding value
-			in maxrgb, it changes it.*/
-			if (v[i] > maxrgb[count])
-				maxrgb[count] = v[i];
+	/*Loops through the portion of the vector, applying checks to each
+	value (is it the minimum? is it the maximum?).*/
+	for (unsigned int i = 0; i < H; i++) {
+		for (unsigned int j = 0; j < W; j++) {
+			/*If it's not alpha...*/
+			if ((++count) != bytesPerPixel - 1) {
+				auto value = *(start + i * width + j);
 
-			/*If value is lower than corresponding value
-			in maxrgb, it changes it.*/
-			if (v[i] < minrgb[count])
-				minrgb[count] = v[i];
+				/*If value is higher than corresponding value
+				in maxrgb, it changes it.*/
+				if (value > maxrgb[count])
+					maxrgb[count] = value;
 
-			/*Updates mean.*/
-			mean[count] += v[i];
+				/*If value is lower than corresponding value
+				in maxrgb, it changes it.*/
+				if (value < minrgb[count])
+					minrgb[count] = value;
+
+				/*Updates mean.*/
+				mean[count] += value;
+			}
+			/*Resets count when it reached bytesPerPixel - 1.*/
+			else
+				count = -1;
 		}
-		/*Updates count and resets it when it reached bytesPerPixel.*/
-		if ((++count) == bytesPerPixel)
-			count = 0;
 	}
 
 	unsigned int temp = 0;
@@ -221,41 +225,30 @@ bool QuadTree::lessThanThreshold(const std::vector<unsigned char>& v) {
 	/*Checks if formula is lower than threshold. */
 	if (temp <= threshold) {
 		for (int i = 0; i < bytesPerPixel - 1; i++)
-			mean[i] /= (v.size() / bytesPerPixel);
+			mean[i] /= (W * H / bytesPerPixel);
 		result = true;
 	}
 	return result;
 }
 
-/*Cuts a part of the given vector according to the parameter which and returns said part.*/
-const std::vector<unsigned char> QuadTree::cutVector(const std::vector<unsigned char>& v, int which) {
-	unsigned int row, col;
-
+/*Returns an iterator pointing to the start of a part of the given vector
+according to the parameter 'which'.*/
+iterator QuadTree::cutVector(const iterator& start,
+	unsigned int W, unsigned int H, unsigned int which) {
 	/*Checks validity of input.*/
-	if (which < 0 || which >= divide)
+	if (which < 0 || which >= divide || W < 0 || H < 0)
 		throw std::exception("Wrong input in cutVector.");
 
-	/*If the vector is empty, it returns it. It can't be cut.*/
-	if (!v.size())
-		return v;
+	/*If the vector is empty, it returns its start. It can't be cut.*/
+	if (!W || !H)
+		return start;
 
-	/*Sets paraemeters for row and column at the half of each dimension.*/
-	unsigned int halfCol = sqrt(v.size() * bytesPerPixel) / 2;
-	unsigned int halfRow = halfCol / bytesPerPixel;
+	/*Sets new row and column.*/
+	unsigned int row = (which / 2) * H / 2;
+	unsigned int col = (which % 2) * W / 2;
 
-	/*Sets starting row and column.*/
-	row = (which / 2) * halfRow;
-	col = (which % 2) * halfCol;
-
-	std::vector <unsigned char> temp;
-
-	/*Fills 'temp' with the given part of the original vector.*/
-	for (unsigned int i = row; i < row + halfRow; i++) {
-		for (unsigned int j = col; j < col + halfCol; j++) {
-			temp.push_back(v.at(i * (2 * halfCol) + j));
-		}
-	}
-	return temp;
+	/*Returns an interator pointing to said position.*/
+	return start + row * width + col;
 }
 
 /*Finds the nearest multiple of base that is higher than number.*/
@@ -282,7 +275,8 @@ void QuadTree::decompressAndSave(const char* input, const char* output) {
 	decodeCompressed(input);
 
 	/*Decompresses file.*/
-	decompress(originalData);
+	auto start = originalData.begin();
+	decompress(start);
 
 	/*Encodes raw data file.*/
 	encodeRaw(output);
@@ -311,7 +305,7 @@ void QuadTree::decodeCompressed(const char* fileName) {
 	size = static_cast<unsigned int> (pow(pow(2, size), 2) * bytesPerPixel);
 
 	/*Sets decompressed to correct size.*/
-	decompressed = std::vector<unsigned char>(size);
+	decompressed = charVector(size);
 
 	originalData.clear();
 
@@ -325,55 +319,36 @@ void QuadTree::decodeCompressed(const char* fileName) {
 }
 
 /*Decompresses data from vector. */
-void QuadTree::decompress(std::vector<unsigned char>& v) {
-	unsigned int size = v.size();
-
+void QuadTree::decompress(iterator& ptr) {
 	/*Sets static list to check for absolut position within data.*/
-	static std::list<int> absPosit;
-
-	/*If the vector is empty, it can't be decompressed.*/
-	if (!size) {
-		return;
-	}
+	static intVector absPosit;
 
 	/*If it found a leaf...*/
-	else if (v[0] == treeData::noChildren) {
-		/*If the format is correct...*/
-		if (v.size() >= bytesPerPixel) {
-			int temp[bytesPerPixel - 1];
+	if (*ptr == treeData::noChildren) {
+		int temp[bytesPerPixel - 1];
 
-			/*Loads 'temp' with RGB data.*/
-			for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
-				temp[i] = v[i + 1];
-
-			/*Fills the corresponding section of 'decompressed' with the RGB data.*/
-			fillDecompressedVector(temp, absPosit);
-
-			/*Cuts the used portion from vector.*/
-			v = std::vector<unsigned char>(v.begin() + bytesPerPixel, v.end());
+		/*'Removes' flag from vector.*/
+		ptr++;
+		/*Loads 'temp' with RGB data and 'removes' RGB data from vector.*/
+		for (unsigned int i = 0; i < bytesPerPixel - 1; i++) {
+			temp[i] = *ptr;
+			ptr++;
 		}
-		else {
-			throw std::exception("Decompress got an invalid input.");
-		}
+
+		/*Fills the corresponding section of 'decompressed' with the RGB data.*/
+		fillDecompressedVector(temp, absPosit);
 	}
 
 	/*If it found an inner node...*/
-	else if (v[0] == treeData::hasChildren) {
-		std::vector<unsigned char> temp;
-
-		/*Sets 'temp' to be the rest of the vector without the hasChildren parameter.*/
-		temp = std::vector<unsigned char>(v.begin() + 1, v.end());
-
+	else if (*ptr == treeData::hasChildren) {
+		ptr++;
 		/*For each one of the children...*/
-		for (int i = 0; i < divide && v.size(); i++) {
+		for (int i = 0; i < divide; i++) {
 			/*Sets new absolut position.*/
 			absPosit.push_back(i);
 
 			/*Recursively calls itself to decompress the child.*/
-			decompress(temp);
-
-			/*Sets vector to new parameters.*/
-			v = temp;
+			decompress(ptr);
 
 			/*Removes the last parameter of the absolut position corresponding to the child.*/
 			absPosit.pop_back();
@@ -410,7 +385,7 @@ void QuadTree::encodeRaw(const char* fileName) {
 }
 
 /*Fills a given portion of the decompressed vector.*/
-void QuadTree::fillDecompressedVector(int* rgb, const std::list<int>& absPosit) {
+void QuadTree::fillDecompressedVector(int* rgb, const intVector& absPosit) {
 	/*Level is the depth in the tree.*/
 	unsigned int level = absPosit.size();
 
@@ -451,7 +426,7 @@ void QuadTree::fillDecompressedVector(int* rgb, const std::list<int>& absPosit) 
 	for (unsigned int i = initRow; i < initRow + newHeight; i++) {
 		/*For each column in the square to fill...*/
 		for (unsigned int j = initCol; j < initCol + newWidth; j++) {
-			/*Loads decompressed with alpha if it's the bytesPerPixel - 1 time.*/
+			/*Loads decompressed with alpha if it's the corresponding position.*/
 			if (iter == (bytesPerPixel - 1)) {
 				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = alfa;
 				iter = -1;
