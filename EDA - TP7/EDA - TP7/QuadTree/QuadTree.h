@@ -19,6 +19,7 @@ private:
 
 	/*Compression*/
 	void decodeRaw(const std::string&);
+	void checkData(void);
 	void compress(const iterator&, unsigned int, unsigned int);
 	void encodeCompressed(const std::string&) const;
 

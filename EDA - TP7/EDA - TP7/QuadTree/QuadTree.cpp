@@ -17,16 +17,11 @@ namespace treeData {
 }
 
 /*QuadTree constructor. Sets mean and threshold to 0, and saves format.*/
-QuadTree::QuadTree(const std::string& format_) {
-	int pos = format_.find_last_of('.');
+QuadTree::QuadTree(const std::string& format) {
+	int pos = format.find_last_of('.');
 
 	/*Saves format without initial '.'.*/
-	if (pos != std::string::npos)
-		format = format_.substr(pos + 1, format_.length() - pos);
-	else
-		format = format_;
-	mean = intVector(bytesPerPixel - 1);
-	threshold = NULL;
+	this->format = format.substr(pos + 1, format.length() - pos);
 }
 
 /*******************************
@@ -36,8 +31,8 @@ QuadTree::QuadTree(const std::string& format_) {
 *******************************/
 
 /*Compresses image from input file to output file, with the given threshold. */
-void QuadTree::compressAndSave(const std::string& input, const std::string& output, const double threshold_) {
-	if (threshold_ > 0 && threshold_ <= 1) {
+void QuadTree::compressAndSave(const std::string& input, const std::string& output, const double threshold) {
+	if (threshold > 0 && threshold <= 1) {
 		/*Transforms filenames into correct ones.*/
 		const std::string realInput = parse(input, "png");
 		const std::string realOutput = parse(output, format);
@@ -45,10 +40,13 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 		tree.clear();
 
 		/*Sets threshold.*/
-		threshold = threshold_ * maxDif;
+		this->threshold = threshold * maxDif;
 
 		/*Decodes raw data.*/
 		decodeRaw(realInput);
+
+		/*Checks validity of data format.*/
+		checkData();
 
 		/*Compresses file.*/
 		compress(originalData.begin(), width, height);
@@ -86,34 +84,38 @@ void QuadTree::decodeRaw(const std::string& fileName) {
 		free(img);
 }
 
-/*Recursively compresses data to tree.*/
-void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
-	/*Checks if vector is empty.*/
-
-	if (W < 0 || H < 0)
+/*Checks validity of input data through width and height.*/
+void QuadTree::checkData(void) {
+	/*Checks for validity of width and height.*/
+	if (width < 0 || height < 0)
 		throw std::exception("Wrong input to compress.");
-	if (!(W * H))
+
+	/*Checks if it's an empty array.*/
+	if (!(width * height))
 		throw std::exception("File is empty or doesn't exist.");
 
 	/*Checks if width is a power of 2.*/
-	if (floor(log2(W / bytesPerPixel)) != log2(W / bytesPerPixel))
+	if (floor(log2(width / bytesPerPixel)) != log2(width / bytesPerPixel))
 		throw std::exception("Width not in form of 2^n.");
 
 	/*Checks if height is a power of 2.*/
-	if (floor(log2(H)) != log2(H))
+	if (floor(log2(height)) != log2(height))
 		throw std::exception("Height not in form of 2^n.");
 
 	/*Checks if vector is square*/
-	if (W / bytesPerPixel != H)
+	if (width / bytesPerPixel != height)
 		throw std::exception("Image should be square.");
 
 	/*Checks if vector has appropriate length.*/
-	else if (W * H < bytesPerPixel) {
+	if (width * height < bytesPerPixel) {
 		throw std::exception("Compress got invalid input.");
 	}
+}
 
+/*Recursively compresses data to tree.*/
+void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 	/*If it's only one pixel...*/
-	else if (W * H == bytesPerPixel) {
+	if (W * H == bytesPerPixel) {
 		/*Loads noChildren to tree and pushes RGB code. It's a leaf.*/
 		tree.push_back(treeData::noChildren);
 		for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
@@ -187,7 +189,6 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 	/*Creates variables to use in function. Mexrgb saves max values of rgb and
 	minrgb saves min values of rgb.*/
-
 	mean = intVector(bytesPerPixel - 1);
 	intVector maxrgb = intVector(start, start + bytesPerPixel - 1);
 	intVector minrgb = maxrgb;
