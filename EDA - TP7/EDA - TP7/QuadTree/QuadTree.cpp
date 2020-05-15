@@ -134,12 +134,12 @@ void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 		It's an inner node.*/
 		tree.push_back(treeData::hasChildren);
 		for (int i = 0; i < divide; i++)
-			compress(cutVector(start, W, H, i), W / 2, H / 2);
+			compress(getNewPosition(start, W, H, i), W / 2, H / 2);
 	}
 }
 
 /*Encodes compressed data to file.*/
-void QuadTree::encodeCompressed(const std::string& fileName) {
+void QuadTree::encodeCompressed(const std::string& fileName) const {
 	/*Generates size that is a multiple of bytesPerPixel.*/
 	unsigned int size = findNearestMultiple(tree.size(), bytesPerPixel);
 
@@ -185,12 +185,8 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 	if (W * H < bytesPerPixel)
 		throw std::exception("lessThanThreshold got an invalid input.");
 
-	/*
-	Creates variables to use in function:
-
-	- mexrgb saves max values of rgb.
-	- minrgb saves min values of rgb.
-	*/
+	/*Creates variables to use in function. Mexrgb saves max values of rgb and
+	minrgb saves min values of rgb.*/
 
 	mean = intVector(bytesPerPixel - 1);
 	intVector maxrgb = intVector(start, start + bytesPerPixel - 1);
@@ -242,10 +238,10 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 /*Returns an iterator pointing to the start of a part of the given vector
 according to the parameter 'which'.*/
-iterator QuadTree::cutVector(const iterator& start, unsigned int W, unsigned int H, unsigned int which) {
+iterator QuadTree::getNewPosition(const iterator& start, unsigned int W, unsigned int H, unsigned int which) const {
 	/*Checks validity of input.*/
 	if (which < 0 || which >= divide || W < 0 || H < 0)
-		throw std::exception("Wrong input in cutVector.");
+		throw std::exception("Wrong input in getNewPosition.");
 
 	/*If the vector is empty, it returns its start. It can't be cut.*/
 	if (!W || !H)
@@ -260,11 +256,10 @@ iterator QuadTree::cutVector(const iterator& start, unsigned int W, unsigned int
 }
 
 /*Finds the nearest multiple of base that is higher than number.*/
-unsigned int QuadTree::findNearestMultiple(unsigned int number, unsigned int base) {
+unsigned int QuadTree::findNearestMultiple(unsigned int number, unsigned int base) const {
 	unsigned int temp = number + 1;
-	while (temp % base) {
+	while (temp % base)
 		temp++;
-	}
 	return temp;
 }
 
@@ -372,7 +367,7 @@ void QuadTree::decompress(iterator& ptr) {
 }
 
 /*Encodes raw data to file.*/
-void QuadTree::encodeRaw(const std::string& fileName) {
+void QuadTree::encodeRaw(const std::string& fileName) const {
 	/*Allocates memory for data array and checks for errors.*/
 	unsigned char* updatedImg = (unsigned char*)malloc(decompressed.size() * sizeof(unsigned char));
 	if (!updatedImg)
@@ -454,7 +449,7 @@ void QuadTree::fillDecompressedVector(int* rgb, const intVector& absPosit) {
 }
 
 /*Returns a usable string to use as filename, according to the specified format.*/
-const std::string QuadTree::parse(const std::string& filename, const std::string& Format) {
+const std::string QuadTree::parse(const std::string& filename, const std::string& Format) const {
 	/*If filename has no specified format, it returns the same string plus its format.*/
 	if (filename.find('.') == std::string::npos)
 		return filename + '.' + Format;

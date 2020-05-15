@@ -20,20 +20,20 @@ private:
 	/*Compression*/
 	void decodeRaw(const std::string&);
 	void compress(const iterator&, unsigned int, unsigned int);
-	void encodeCompressed(const std::string&);
+	void encodeCompressed(const std::string&) const;
 
-	unsigned int findNearestMultiple(unsigned int, unsigned int);
-	iterator cutVector(const iterator&, unsigned int, unsigned int, unsigned int);
+	unsigned int findNearestMultiple(unsigned int, unsigned int) const;
+	iterator getNewPosition(const iterator&, unsigned int, unsigned int, unsigned int) const;
 	bool lessThanThreshold(const iterator&, unsigned int, unsigned int);
 
 	/*Decompression*/
-	void encodeRaw(const std::string&);
+	void encodeRaw(const std::string&) const;
 	void decompress(iterator&);
 	void decodeCompressed(const std::string&);
 
 	void fillDecompressedVector(int*, const intVector&);
 
-	const std::string parse(const std::string&, const std::string&);
+	const std::string parse(const std::string&, const std::string&) const;
 
 	/*Prevents from using copy constructor.*/
 	QuadTree(const QuadTree&) {};
