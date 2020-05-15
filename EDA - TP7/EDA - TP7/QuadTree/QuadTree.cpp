@@ -17,8 +17,15 @@ namespace treeData {
 	};
 }
 
-/*QuadTree constructor. Just sets mean and threshold to 0.*/
-QuadTree::QuadTree() {
+/*QuadTree constructor. Sets mean and threshold to 0, and saves format.*/
+QuadTree::QuadTree(const std::string& format_) {
+	int pos = format_.find_last_of('.');
+
+	/*Saves format without initial '.'.*/
+	if (pos != std::string::npos)
+		format = format_.substr(pos + 1, format_.length() - pos);
+	else
+		format = format_;
 	mean = intVector(bytesPerPixel - 1);
 	threshold = NULL;
 }
@@ -30,46 +37,50 @@ QuadTree::QuadTree() {
 *******************************/
 
 /*Compresses image from input file to output file, with the given threshold. */
-void QuadTree::compressAndSave(const char* input, const char* output, const double threshold_) {
+void QuadTree::compressAndSave(const std::string& input, const std::string& output, const double threshold_) {
 	if (threshold_ > 0 && threshold_ <= 1) {
-		/*Clears tree.*/
+		/*Transforms filenames into correct ones.*/
+		const std::string realInput = parse(input, "png");
+		const std::string realOutput = parse(output, format);
+
 		tree.clear();
 
 		/*Sets threshold.*/
 		threshold = threshold_ * maxDif;
 
-		/*Decodes file.*/
-		decodeRaw(input);
+		/*Decodes raw data.*/
+		decodeRaw(realInput);
 
 		/*Compresses file.*/
 		compress(originalData.begin(), width, height);
 
 		/*Encodes compressed file.*/
-		encodeCompressed(output);
+		encodeCompressed(realOutput);
 	}
 	else
 		throw std::exception("Threshold must be a non-negative value between 0 and 1.");
 }
 
 /*Decodes raw data from file.*/
-void QuadTree::decodeRaw(const char* fileName) {
+void QuadTree::decodeRaw(const std::string& fileName) {
 	unsigned char* img;
 
 	/*Decodes file and checks for errors.*/
-	int error = lodepng_decode32_file(&img, &width, &height, fileName);
+	int error = lodepng_decode32_file(&img, &width, &height, fileName.c_str());
 	if (error) {
 		std::string errStr = "Failed to decode file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
 	}
+	if (!img)
+		throw std::exception("lodepng_decode32_file error.");
 
 	/*Sets real width.*/
 	width *= bytesPerPixel;
 
 	/*Loads originalData with raw data from file.*/
 	originalData.clear();
-	for (unsigned int i = 0; i < width * height; i++) {
+	for (unsigned int i = 0; i < width * height; i++)
 		originalData.push_back(img[i]);
-	}
 
 	/*Frees resources.*/
 	if (img)
@@ -79,16 +90,18 @@ void QuadTree::decodeRaw(const char* fileName) {
 /*Recursively compresses data to tree.*/
 void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 	/*Checks if vector is empty.*/
-	if (!(W * H)) {
+
+	if (W < 0 || H < 0)
+		throw std::exception("Wrong input to compress.");
+	if (!(W * H))
 		throw std::exception("File is empty or doesn't exist.");
-	}
 
 	/*Checks if width is a power of 2.*/
-	if ((int)log2(W / bytesPerPixel) != log2(W / bytesPerPixel))
+	if (floor(log2(W / bytesPerPixel)) != log2(W / bytesPerPixel))
 		throw std::exception("Width not in form of 2^n.");
 
 	/*Checks if height is a power of 2.*/
-	if ((int)log2(H) != log2(H))
+	if (floor(log2(H)) != log2(H))
 		throw std::exception("Height not in form of 2^n.");
 
 	/*Checks if vector is square*/
@@ -121,14 +134,13 @@ void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 		/*It pushes hasChildren and compresses the vector in 'divide' parts.
 		It's an inner node.*/
 		tree.push_back(treeData::hasChildren);
-		for (int i = 0; i < divide; i++) {
+		for (int i = 0; i < divide; i++)
 			compress(cutVector(start, W, H, i), W / 2, H / 2);
-		}
 	}
 }
 
 /*Encodes compressed data to file.*/
-void QuadTree::encodeCompressed(const char* fileName) {
+void QuadTree::encodeCompressed(const std::string& fileName) {
 	/*Generates size that is a multiple of bytesPerPixel.*/
 	unsigned int size = findNearestMultiple(tree.size(), bytesPerPixel);
 
@@ -151,12 +163,11 @@ void QuadTree::encodeCompressed(const char* fileName) {
 		encoded[i] = treeData::filling;
 
 	/*Loads the rest of the array with the real compressed data.*/
-	for (unsigned int i = 0; i < tree.size(); i++) {
+	for (unsigned int i = 0; i < tree.size(); i++)
 		encoded[i + size - tree.size()] = tree.at(i);
-	}
 
 	/*Encodes compressed data in file and checks for errors.*/
-	int error = lodepng_encode32_file(fileName, encoded, size / bytesPerPixel, 1);
+	int error = lodepng_encode32_file(fileName.c_str(), encoded, size / bytesPerPixel, 1);
 	if (error) {
 		std::string errStr = "Failed to encode compressed file. Lodepng error: " + (std::string)lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
@@ -218,9 +229,8 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 	unsigned int temp = 0;
 
 	/*Applies formula.*/
-	for (unsigned int i = 0; i < bytesPerPixel - 1; i++) {
+	for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
 		temp += maxrgb[i] - minrgb[i];
-	}
 
 	/*Checks if formula is lower than threshold. */
 	if (temp <= threshold) {
@@ -233,8 +243,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 /*Returns an iterator pointing to the start of a part of the given vector
 according to the parameter 'which'.*/
-iterator QuadTree::cutVector(const iterator& start,
-	unsigned int W, unsigned int H, unsigned int which) {
+iterator QuadTree::cutVector(const iterator& start, unsigned int W, unsigned int H, unsigned int which) {
 	/*Checks validity of input.*/
 	if (which < 0 || which >= divide || W < 0 || H < 0)
 		throw std::exception("Wrong input in cutVector.");
@@ -267,27 +276,32 @@ unsigned int QuadTree::findNearestMultiple(unsigned int number, unsigned int bas
 *******************************/
 
 /*Decompresses the input file and saves it to output file. */
-void QuadTree::decompressAndSave(const char* input, const char* output) {
-	/*Clears placeholder for decompressed data.*/
-	decompressed.clear();
+void QuadTree::decompressAndSave(const std::string& input, const std::string& output) {
+	const std::string realInput = parse(input, format);
+	const std::string realOutput = parse(output, "png");
 
 	/*Decodes compressed file.*/
-	decodeCompressed(input);
+	decodeCompressed(realInput);
 
 	/*Decompresses file.*/
 	auto start = originalData.begin();
 	decompress(start);
 
 	/*Encodes raw data file.*/
-	encodeRaw(output);
+	encodeRaw(realOutput);
 }
 
 /*Decodes compressed data from file. */
-void QuadTree::decodeCompressed(const char* fileName) {
+void QuadTree::decodeCompressed(const std::string& fileName) {
 	unsigned char* img;
 
 	/*Decodes data and checks for errors.*/
-	lodepng_decode32_file(&img, &width, &height, fileName);
+	int error = lodepng_decode32_file(&img, &width, &height, fileName.c_str());
+	if (error) {
+		std::string errStr = "Failed to decode compressed file. Lodepng error: " + (std::string)lodepng_error_text(error);
+		throw std::exception(errStr.c_str());
+	}
+
 	if (!img)
 		throw std::exception("lodepng_decode32_file error");
 
@@ -359,7 +373,7 @@ void QuadTree::decompress(iterator& ptr) {
 }
 
 /*Encodes raw data to file.*/
-void QuadTree::encodeRaw(const char* fileName) {
+void QuadTree::encodeRaw(const std::string& fileName) {
 	/*Allocates memory for data array and checks for errors.*/
 	unsigned char* updatedImg = (unsigned char*)malloc(decompressed.size() * sizeof(unsigned char));
 	if (!updatedImg)
@@ -373,7 +387,7 @@ void QuadTree::encodeRaw(const char* fileName) {
 	unsigned int size = static_cast<unsigned int> (sqrt(decompressed.size() / bytesPerPixel));
 
 	/*Encodes data to file and checks for errors.*/
-	int error = lodepng_encode32_file(fileName, updatedImg, size, size);
+	int error = lodepng_encode32_file(fileName.c_str(), updatedImg, size, size);
 	if (error) {
 		std::string errStr = "Failed to encode raw file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
@@ -438,6 +452,20 @@ void QuadTree::fillDecompressedVector(int* rgb, const intVector& absPosit) {
 			iter++;
 		}
 	}
+}
+
+/*Returns a usable string to use as filename, according to the specified format.*/
+const std::string QuadTree::parse(const std::string& filename, const std::string& Format) {
+	/*If filename has no specified format, it returns the same string plus its format.*/
+	if (filename.find('.') == std::string::npos)
+		return filename + '.' + Format;
+
+	/*If filename has the correct format, it returns the same filename.*/
+	if (filename.find('.' + Format) != std::string::npos)
+		return filename;
+
+	const std::string errStr = "Wrong image format. Expected either no format or ." + Format + '.';
+	throw std::exception(errStr.c_str());
 }
 
 QuadTree::~QuadTree() {}
