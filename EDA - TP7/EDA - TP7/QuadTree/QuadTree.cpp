@@ -1,7 +1,5 @@
 #include "QuadTree.h"
 #include "lodepng.h"
-#include <math.h>
-#include <iostream>
 
 /*Constants to use throughout program. */
 namespace {
@@ -11,7 +9,7 @@ namespace {
 	const unsigned int bytesPerPixel = 4;
 }
 namespace treeData {
-	const enum : unsigned char {
+	const enum : const unsigned char {
 		hasChildren,
 		noChildren,
 		filling,
