@@ -1,10 +1,11 @@
 #include "QuadTree.h"
 #include "lodepng.h"
 #include <math.h>
+#include <iostream>
 
 /*Constants to use throughout program. */
 namespace {
-	const unsigned char alfa = 255;
+	const unsigned char alpha = 255;
 	const unsigned int maxDif = 3 * 255;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
@@ -442,7 +443,7 @@ void QuadTree::fillDecompressedVector(int* rgb, const intVector& absPosit) {
 		for (unsigned int j = initCol; j < initCol + newWidth; j++) {
 			/*Loads decompressed with alpha if it's the corresponding position.*/
 			if (iter == (bytesPerPixel - 1)) {
-				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = alfa;
+				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = alpha;
 				iter = -1;
 			}
 
