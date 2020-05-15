@@ -1,5 +1,7 @@
 #include "QuadTree.h"
 #include "lodepng.h"
+//#include <fstream>
+//#include <iostream>
 
 /*Constants to use throughout program. */
 namespace {
@@ -16,7 +18,7 @@ namespace treeData {
 	};
 }
 
-/*QuadTree constructor. Sets mean and threshold to 0, and saves format.*/
+/*QuadTree constructor. Saves format.*/
 QuadTree::QuadTree(const std::string& format) {
 	int pos = format.find_last_of('.');
 
@@ -46,7 +48,7 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 		/*Checks validity of data format.*/
 		checkData();
 
-		/*Saves space for additional tree data and ompresses file.*/
+		/*Saves space for additional tree data and compresses file.*/
 		tree = charVector(bytesPerPixel, treeData::filling);
 		compress(originalData.begin(), width, height);
 
@@ -127,7 +129,7 @@ void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 
 	/*Otherwise...*/
 	else {
-		/*It pushes hasChildren and compresses the vector in 'divide' parts.
+		/*Pushes hasChildren and compresses the vector in 'divide' parts.
 		It's an inner node.*/
 		tree.push_back(treeData::hasChildren);
 		for (int i = 0; i < divide; i++)
@@ -215,7 +217,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 /*Returns an iterator pointing to the start of a part of the given vector
 according to the parameter 'which'.*/
-iterator QuadTree::getNewPosition(const iterator& start, unsigned int W, unsigned int H, unsigned int which) const {
+const iterator QuadTree::getNewPosition(const iterator& start, unsigned int W, unsigned int H, unsigned int which) const {
 	/*Checks validity of input.*/
 	if (which < 0 || which >= divide || W < 0 || H < 0)
 		throw std::exception("Wrong input in getNewPosition.");
@@ -330,15 +332,13 @@ void QuadTree::decompress(iterator& ptr) {
 }
 
 /*Encodes raw data to file.*/
-void QuadTree::encodeRaw(const std::string& fileName) const {
-	/*Points an unsigned char* to decompressed vector.*/
-	const unsigned char* updatedImg = decompressed.data();
 
+void QuadTree::encodeRaw(const std::string& fileName) const {
 	/*Sets size equal to width-height (in pixels) of the data.*/
 	unsigned int size = static_cast<unsigned int> (sqrt(decompressed.size() / bytesPerPixel));
 
 	/*Encodes data to file and checks for errors.*/
-	int error = lodepng_encode32_file(fileName.c_str(), updatedImg, size, size);
+	int error = lodepng_encode32_file(fileName.c_str(), decompressed.data(), size, size);
 	if (error) {
 		std::string errStr = "Failed to encode raw file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());

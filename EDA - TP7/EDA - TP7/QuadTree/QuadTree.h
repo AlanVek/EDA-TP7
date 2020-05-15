@@ -23,7 +23,7 @@ private:
 	void compress(const iterator&, unsigned int, unsigned int);
 	void encodeCompressed(const std::string&);
 
-	iterator getNewPosition(const iterator&, unsigned int, unsigned int, unsigned int) const;
+	const iterator getNewPosition(const iterator&, unsigned int, unsigned int, unsigned int) const;
 	bool lessThanThreshold(const iterator&, unsigned int, unsigned int);
 
 	/*Decompression*/
