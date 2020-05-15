@@ -14,7 +14,7 @@ int main() {
 	const char* in2 = "Images/logo/logo3";
 
 	/*Sets test threshold value. */
-	const double threshold = 0.15;
+	const double threshold = 0.1;
 
 	try {
 		auto startAll = steady_clock::now();

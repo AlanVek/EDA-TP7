@@ -21,9 +21,8 @@ private:
 	void decodeRaw(const std::string&);
 	void checkData(void);
 	void compress(const iterator&, unsigned int, unsigned int);
-	void encodeCompressed(const std::string&) const;
+	void encodeCompressed(const std::string&);
 
-	unsigned int findNearestMultiple(unsigned int, unsigned int) const;
 	iterator getNewPosition(const iterator&, unsigned int, unsigned int, unsigned int) const;
 	bool lessThanThreshold(const iterator&, unsigned int, unsigned int);
 

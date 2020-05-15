@@ -37,8 +37,6 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 		const std::string realInput = parse(input, "png");
 		const std::string realOutput = parse(output, format);
 
-		tree.clear();
-
 		/*Sets threshold.*/
 		this->threshold = threshold * maxDif;
 
@@ -48,7 +46,8 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 		/*Checks validity of data format.*/
 		checkData();
 
-		/*Compresses file.*/
+		/*Saves space for additional tree data and ompresses file.*/
+		tree = charVector(bytesPerPixel, treeData::filling);
 		compress(originalData.begin(), width, height);
 
 		/*Encodes compressed file.*/
@@ -75,9 +74,7 @@ void QuadTree::decodeRaw(const std::string& fileName) {
 	width *= bytesPerPixel;
 
 	/*Loads originalData with raw data from file.*/
-	originalData.clear();
-	for (unsigned int i = 0; i < width * height; i++)
-		originalData.push_back(img[i]);
+	originalData.assign(img, img + width * height);
 
 	/*Frees resources.*/
 	if (img)
@@ -118,16 +115,14 @@ void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 	if (W * H == bytesPerPixel) {
 		/*Loads noChildren to tree and pushes RGB code. It's a leaf.*/
 		tree.push_back(treeData::noChildren);
-		for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
-			tree.push_back(*(start + i));
+		tree.insert(tree.end(), start, start + bytesPerPixel - 1);
 	}
 
 	/*If vector's RGB formula is less than threshold...*/
 	else if (lessThanThreshold(start, W, H)) {
 		/*Loads noChildren to tree and pushes mean RGB code. It's a leaf.*/
 		tree.push_back(treeData::noChildren);
-		for (int i = 0; i < bytesPerPixel - 1; i++)
-			tree.push_back(mean.at(i));
+		tree.insert(tree.end(), mean.begin(), mean.end());
 	}
 
 	/*Otherwise...*/
@@ -141,42 +136,23 @@ void QuadTree::compress(const iterator& start, unsigned int W, unsigned int H) {
 }
 
 /*Encodes compressed data to file.*/
-void QuadTree::encodeCompressed(const std::string& fileName) const {
+void QuadTree::encodeCompressed(const std::string& fileName) {
 	/*Generates size that is a multiple of bytesPerPixel.*/
-	unsigned int size = findNearestMultiple(tree.size(), bytesPerPixel);
+	unsigned int size = tree.size();
+	while ((++size) % bytesPerPixel);
 
-	/*Allocates memory for data array.*/
-	unsigned char* encoded = (unsigned char*)malloc(size * sizeof(unsigned char));
-	if (!encoded)
-		throw std::exception("Failed to allocate memory for output.");
+	/*Loads original image size in first position.The file can only take numbers
+	from 0 to 255. As images are square and their sides are of the form 2^n,
+	the chosen method was to set n as the size output.*/
+	unsigned int offset = tree.size() - size + bytesPerPixel;
+	tree[offset] = (unsigned char)log2(height);
 
-	/*Loads original image size in first position.
-	The file can only take numbers from 0 to 255.
-	As images are square and its sides
-	are of the form 2^n, the chosen method was to
-	set n as the size output.*/
-	encoded[0] = (unsigned char)log2(height);
-
-	/*Fills the rest of the space used to get the size as
-	a multiple of bytesPerPixel with an arbitrary number different
-	than hasChildren and noChildren.*/
-	for (unsigned int i = 1; i < size - tree.size(); i++)
-		encoded[i] = treeData::filling;
-
-	/*Loads the rest of the array with the real compressed data.*/
-	for (unsigned int i = 0; i < tree.size(); i++)
-		encoded[i + size - tree.size()] = tree.at(i);
-
-	/*Encodes compressed data in file and checks for errors.*/
-	int error = lodepng_encode32_file(fileName.c_str(), encoded, size / bytesPerPixel, 1);
+	/*Encodes tree in file and checks for errors.*/
+	int error = lodepng_encode32_file(fileName.c_str(), tree.data() + offset, size / bytesPerPixel, 1);
 	if (error) {
 		std::string errStr = "Failed to encode compressed file. Lodepng error: " + (std::string)lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
 	}
-
-	/*Frees resources.*/
-	if (encoded)
-		free(encoded);
 }
 
 /*Checks if vector's RGB formula is less than threshold.
@@ -190,7 +166,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 	/*Creates variables to use in function. Mexrgb saves max values of rgb and
 	minrgb saves min values of rgb.*/
 	mean = intVector(bytesPerPixel - 1);
-	intVector maxrgb = intVector(start, start + bytesPerPixel - 1);
+	intVector maxrgb(start, start + bytesPerPixel - 1);
 	intVector minrgb = maxrgb;
 	bool result = false;
 	int count = -1;
@@ -210,7 +186,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 				/*If value is lower than corresponding value
 				in maxrgb, it changes it.*/
-				if (value < minrgb[count])
+				else if (value < minrgb[count])
 					minrgb[count] = value;
 
 				/*Updates mean.*/
@@ -256,14 +232,6 @@ iterator QuadTree::getNewPosition(const iterator& start, unsigned int W, unsigne
 	return start + row * width + col;
 }
 
-/*Finds the nearest multiple of base that is higher than number.*/
-unsigned int QuadTree::findNearestMultiple(unsigned int number, unsigned int base) const {
-	unsigned int temp = number + 1;
-	while (temp % base)
-		temp++;
-	return temp;
-}
-
 /*******************************
 
 		  Decompression
@@ -303,24 +271,18 @@ void QuadTree::decodeCompressed(const std::string& fileName) {
 	/*Sets real width.*/
 	width *= bytesPerPixel;
 
-	/*Gets size parameter from first position of data.*/
-	unsigned int size = img[0];
+	/*Sets real size of original image.*/
+	unsigned int size = static_cast<unsigned int> (pow(pow(2, img[0]), 2) * bytesPerPixel);
 
 	/*Goes to end of 'fill' portion of data.*/
 	unsigned int index = 1;
 	for (; img[index] == treeData::filling; index++) {};
 
-	/*Sets real size of original image.*/
-	size = static_cast<unsigned int> (pow(pow(2, size), 2) * bytesPerPixel);
-
 	/*Sets decompressed to correct size.*/
 	decompressed = charVector(size);
 
-	originalData.clear();
-
 	/*Loads compressed data to originalData.*/
-	for (; index < width * height; index++)
-		originalData.push_back(img[index]);
+	originalData.assign(img + index, img + width * height);
 
 	/*Frees resources.*/
 	if (img)
@@ -369,16 +331,10 @@ void QuadTree::decompress(iterator& ptr) {
 
 /*Encodes raw data to file.*/
 void QuadTree::encodeRaw(const std::string& fileName) const {
-	/*Allocates memory for data array and checks for errors.*/
-	unsigned char* updatedImg = (unsigned char*)malloc(decompressed.size() * sizeof(unsigned char));
-	if (!updatedImg)
-		throw std::exception("Failed to allocate memory for compressed image.");
+	/*Points an unsigned char* to decompressed vector.*/
+	const unsigned char* updatedImg = decompressed.data();
 
-	/*Loads data array with data from the decompressed vector.*/
-	for (unsigned int i = 0; i < decompressed.size(); i++) {
-		updatedImg[i] = decompressed.at(i);
-	}
-	/*Sets size equal to width/height (in pixels) of the data.*/
+	/*Sets size equal to width-height (in pixels) of the data.*/
 	unsigned int size = static_cast<unsigned int> (sqrt(decompressed.size() / bytesPerPixel));
 
 	/*Encodes data to file and checks for errors.*/
@@ -387,10 +343,6 @@ void QuadTree::encodeRaw(const std::string& fileName) const {
 		std::string errStr = "Failed to encode raw file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
 	}
-
-	/*Frees resources.*/
-	if (updatedImg)
-		free(updatedImg);
 }
 
 /*Fills a given portion of the decompressed vector.*/
