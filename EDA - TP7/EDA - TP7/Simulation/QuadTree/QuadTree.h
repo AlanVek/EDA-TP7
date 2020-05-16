@@ -15,6 +15,8 @@ public:
 
 	void decompressAndSave(const std::string&, const std::string&);
 
+	void setFormat(const std::string&);
+
 private:
 
 	/*Compression*/
@@ -36,7 +38,7 @@ private:
 	const std::string parse(const std::string&, const std::string&) const;
 
 	/*Prevents from using copy constructor.*/
-	QuadTree(const QuadTree&) {};
+	QuadTree(const QuadTree&);
 
 	/*Data members.*/
 	charVector originalData, decompressed, tree;

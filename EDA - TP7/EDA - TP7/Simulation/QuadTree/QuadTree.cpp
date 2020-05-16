@@ -1,7 +1,5 @@
 #include "QuadTree.h"
 #include "lodepng.h"
-//#include <fstream>
-//#include <iostream>
 
 /*Constants to use throughout program. */
 namespace {
@@ -20,6 +18,11 @@ namespace treeData {
 
 /*QuadTree constructor. Saves format.*/
 QuadTree::QuadTree(const std::string& format) {
+	setFormat(format);
+}
+
+/*Sets new file format for compression.*/
+void QuadTree::setFormat(const std::string& format) {
 	int pos = format.find_last_of('.');
 
 	/*Saves format without initial '.'.*/
@@ -274,7 +277,7 @@ void QuadTree::decodeCompressed(const std::string& fileName) {
 	width *= bytesPerPixel;
 
 	/*Sets real size of original image.*/
-	unsigned int size = static_cast<unsigned int> (pow(pow(2, img[0]), 2) * bytesPerPixel);
+	unsigned int size = (unsigned int)(pow(pow(2, img[0]), 2) * bytesPerPixel);
 
 	/*Goes to end of 'fill' portion of data.*/
 	unsigned int index = 1;
@@ -347,56 +350,40 @@ void QuadTree::encodeRaw(const std::string& fileName) const {
 
 /*Fills a given portion of the decompressed vector.*/
 void QuadTree::fillDecompressedVector(int* rgb, const intVector& absPosit) {
-	/*Level is the depth in the tree.*/
-	unsigned int level = absPosit.size();
-
-	/*Size is the total amount of data corresponding to the portion to fill.*/
-	unsigned int size = decompressed.size() / pow(divide, level);
-
-	/*newWidth/newHeight are the sides of the square to fill.*/
-	unsigned int newWidth = sqrt(size * bytesPerPixel);
-	unsigned int newHeight = newWidth / bytesPerPixel;
+	/*There is a new total amount of data corresponding to the portion to fill.
+	It depends on the depth of the leaf within the tree, which is equal to the
+	size of the absPosit vector. newWidth is the horizontal side of the square to fill.*/
+	unsigned int fullWidth = (unsigned int)sqrt((double)bytesPerPixel * decompressed.size());
+	unsigned int newWidth = fullWidth / (unsigned int)pow(divide, absPosit.size() / 2.0);
 
 	/*Sets initial column and row to 0.
 	It will move from there to the actual position to fill.*/
 	unsigned int initCol = 0;
 	unsigned int initRow = 0;
 
-	unsigned int tempSize;
-	unsigned int counter = 0;
-	unsigned int halfCol, halfRow;
+	unsigned int Col;
 
 	/*For each value of the absolut position...*/
-	for (const auto& x : absPosit) {
-		/*There is a new division, therefore a new total size.*/
-		tempSize = decompressed.size() / pow(divide, counter);
-		counter++;
-
-		/*There are new side lengths of the division.*/
-		halfCol = sqrt(tempSize * bytesPerPixel) / 2;
-		halfRow = halfCol / bytesPerPixel;
+	for (unsigned int i = 0; i < absPosit.size(); i++) {
+		/*There is a new division, therefore a new total size and new side lengths of the division.*/
+		Col = fullWidth / (unsigned int)(2 * pow(divide, i / 2.0));
 
 		/*So the current row/column changes accordingly. */
-		initCol += (x % 2) * halfCol;
-		initRow += (x / 2) * halfRow;
+		initCol += (absPosit[i] % 2) * Col;
+		initRow += (absPosit[i] / 2) * Col / bytesPerPixel;;
 	}
 
-	unsigned int iter = 0;
-
 	/*For each row in the square to fill...*/
-	for (unsigned int i = initRow; i < initRow + newHeight; i++) {
+	for (unsigned int i = initRow; i < initRow + newWidth / bytesPerPixel; i++) {
 		/*For each column in the square to fill...*/
 		for (unsigned int j = initCol; j < initCol + newWidth; j++) {
 			/*Loads decompressed with alpha if it's the corresponding position.*/
-			if (iter == (bytesPerPixel - 1)) {
-				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = alpha;
-				iter = -1;
-			}
+			if (j % bytesPerPixel == (bytesPerPixel - 1))
+				decompressed[i * fullWidth + j] = alpha;
 
 			/*Otherwise, it loads decompressed with the corresponding value of RGB.*/
 			else
-				decompressed[i * sqrt(decompressed.size() * bytesPerPixel) + j] = rgb[iter];
-			iter++;
+				decompressed[i * fullWidth + j] = rgb[j % bytesPerPixel];
 		}
 	}
 }
