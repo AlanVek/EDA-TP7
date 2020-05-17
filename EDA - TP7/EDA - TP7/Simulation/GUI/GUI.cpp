@@ -89,20 +89,6 @@ void GUI::initialImGuiSetup(void) const {
 
 //First GUI run. Loops until a username has been given.
 bool GUI::firstRun(void) {
-	////std::cout << Filesystem::isDir("Simulation") << std::endl;
-	////std::cout << Filesystem::isDir("Debug") << std::endl;
-	//std::string tt = "C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7\\EDA - TP7";
-	//std::cout << Filesystem::isDir(tt.c_str()) << std::endl;
-	//std::string tt2 = "C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7";
-	//std::cout << Filesystem::isDir(tt2.c_str()) << std::endl;
-	//std::cout << tt2 << std::endl;
-
-	//std::string temp = ("C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7\\EDA - TP7\\Simulation\\QuadTree");
-
-	//std::cout << Filesystem::isDir(temp.c_str()) << std::endl;
-
-	//return false;
-
 	bool endOfSetUp = false;
 	bool result = true;
 
@@ -185,7 +171,6 @@ bool GUI::checkGUIEvents(void) {
 
 //Cycle that shows menu (called with every iteration).
 const codes GUI::checkStatus(void) {
-	force = false;
 	codes result = codes::NOTHING;
 
 	al_set_target_backbuffer(guiDisp);
@@ -203,13 +188,6 @@ const codes GUI::checkStatus(void) {
 		ImGui::SetNextWindowSize(ImVec2(GUI_data::width, GUI_data::height));
 		ImGui::SetNextWindowPos(ImVec2(0, 0));
 		ImGui::Begin("EDA - TP6");
-
-		/*Filesystem to browse through folders.
-		Returns a different member of enum class codes
-		according to the user's input. Show different folders/files
-		depending on whether the user wants to compress or decompress.
-		Save somwhere the files the user selects, so then Simulation
-		can request them.*/
 
 		/*Text input for file format.*/
 		ImGui::Text("Compressed files format: ");
@@ -230,13 +208,16 @@ const codes GUI::checkStatus(void) {
 
 		if (ImGui::Button("Compress")) {
 			action = codes::COMPRESS;
-			force = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Decompress")) {
 			action = codes::DECOMPRESS;
-			force = true;
 		}
+
+		const auto show = [this](const char* path = nullptr) {
+			if (force) { force = !force; return fs.pathContent(path, true); }
+			return fs.pathContent(path, false);
+		};
 
 		ImGui::NewLine();
 		ImGui::NewLine();
@@ -246,10 +227,10 @@ const codes GUI::checkStatus(void) {
 
 		std::string path = fs.getPath();
 		ImGui::Text(path.c_str());
-		for (const auto& file : fs.pathContent()) {
+		for (const auto& file : show()) {
 			if (Filesystem::isDir((path + '\\' + file).c_str())) {
 				if (ImGui::Button(file.c_str())) {
-					fs.pathContent(file.c_str());
+					show(file.c_str());
 					files.clear();
 				}
 			}
@@ -272,9 +253,14 @@ const codes GUI::checkStatus(void) {
 		/*Exit button.*/
 		if (ImGui::Button("Exit"))
 			result = codes::END;
+
+		ImGui::SameLine();
+		if (ImGui::Button("Back"))
+			fs.back();
+
+		/*Perform button.*/
 		ImGui::SameLine();
 		if (ImGui::Button("Perform")) {
-			std::cout << (int)action << std::endl;
 			result = action;
 		}
 
@@ -294,6 +280,8 @@ const codes GUI::checkStatus(void) {
 const std::string& GUI::getFormat(void) { return format; }
 const float GUI::getThreshold(void) { return threshold; }
 const std::map<std::string, codes>& GUI::getFiles(void) { return files; }
+
+void GUI::updateShowStatus() { force = !force; }
 
 //Cleanup. Frees resources.
 GUI::~GUI() {

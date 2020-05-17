@@ -1,6 +1,5 @@
 #include <iostream>
 #include "Simulation/Simulation.h"
-
 int main() {
 	try {
 		Simulation mySim;

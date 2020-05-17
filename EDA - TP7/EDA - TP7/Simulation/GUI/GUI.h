@@ -30,6 +30,8 @@ public:
 
 	const std::map<std::string, codes>& getFiles(void);
 
+	void updateShowStatus();
+
 protected:
 	void initialImGuiSetup(void) const;
 

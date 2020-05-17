@@ -64,6 +64,7 @@ void Simulation::compressFiles() {
 			qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
 		}
 	}
+	gui->updateShowStatus();
 }
 void Simulation::decompressFiles() {
 	const auto& files = gui->getFiles();
@@ -74,4 +75,5 @@ void Simulation::decompressFiles() {
 			qt->decompressAndSave(file.first, file.first.substr(0, pos));
 		}
 	}
+	gui->updateShowStatus();
 }
