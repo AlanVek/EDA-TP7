@@ -6,6 +6,9 @@
 #include <allegro5/keyboard.h>
 #include <allegro5/mouse.h>
 #include <allegro5/allegro_primitives.h>
+#include <boost/filesystem.hpp>
+
+#include <iostream>
 
 namespace GUI_data {
 	const unsigned int width = 750;
@@ -13,16 +16,23 @@ namespace GUI_data {
 
 	const float minThreshold = 0.1;
 	const float maxThreshold = 1;
+
+	const enum {
+		okFile,
+		badFile
+	};
 }
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
-GUI::GUI(void) : threshold(NULL) {
+GUI::GUI(void) : threshold(GUI_data::minThreshold) {
 	format.clear();
 
 	guiDisp = nullptr;
 	guiQueue = nullptr;
-
+	action = codes::NOTHING;
 	setAllegro();
+
+	force = false;
 }
 
 /*Initializes Allegro resources and throws different
@@ -79,6 +89,20 @@ void GUI::initialImGuiSetup(void) const {
 
 //First GUI run. Loops until a username has been given.
 bool GUI::firstRun(void) {
+	////std::cout << Filesystem::isDir("Simulation") << std::endl;
+	////std::cout << Filesystem::isDir("Debug") << std::endl;
+	//std::string tt = "C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7\\EDA - TP7";
+	//std::cout << Filesystem::isDir(tt.c_str()) << std::endl;
+	//std::string tt2 = "C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7";
+	//std::cout << Filesystem::isDir(tt2.c_str()) << std::endl;
+	//std::cout << tt2 << std::endl;
+
+	//std::string temp = ("C:\\Users\\alanv\\source\\repos\\EDA-TP7\\EDA - TP7\\EDA - TP7\\Simulation\\QuadTree");
+
+	//std::cout << Filesystem::isDir(temp.c_str()) << std::endl;
+
+	//return false;
+
 	bool endOfSetUp = false;
 	bool result = true;
 
@@ -161,8 +185,7 @@ bool GUI::checkGUIEvents(void) {
 
 //Cycle that shows menu (called with every iteration).
 const codes GUI::checkStatus(void) {
-	bool keepGoing = true;
-
+	force = false;
 	codes result = codes::NOTHING;
 
 	al_set_target_backbuffer(guiDisp);
@@ -203,21 +226,57 @@ const codes GUI::checkStatus(void) {
 
 		ImGui::NewLine();
 		ImGui::NewLine();
+		ImGui::Text("Actions ");
+
+		if (ImGui::Button("Compress")) {
+			action = codes::COMPRESS;
+			force = true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Decompress")) {
+			action = codes::DECOMPRESS;
+			force = true;
+		}
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		ImGui::Text("Current path: ");
+		ImGui::SameLine();
+
+		std::string path = fs.getPath();
+		ImGui::Text(path.c_str());
+		for (const auto& file : fs.pathContent()) {
+			if (Filesystem::isDir((path + '\\' + file).c_str())) {
+				if (ImGui::Button(file.c_str())) {
+					fs.pathContent(file.c_str());
+					files.clear();
+				}
+			}
+			else {
+				if (ImGui::Checkbox(file.c_str(), (bool*)&files[path + '\\' + file])) {
+					if ((bool)files[path + '\\' + file])
+						files[path + '\\' + file] = action;
+					else
+						files[path + '\\' + file] = codes::NOTHING;
+				}
+
+				ImGui::NextColumn();
+			}
+		}
 
 		/*Buttons for compression and decompression.*/
-		ImGui::Text("Actions ");
-		if (ImGui::Button("Compress"))
-			return codes::COMPRESS;
-		ImGui::SameLine();
-		if (ImGui::Button("Decompress"))
-			return codes::DECOMPRESS;
-
 		ImGui::NewLine();
 		ImGui::NewLine();
 
 		/*Exit button.*/
 		if (ImGui::Button("Exit"))
 			result = codes::END;
+		ImGui::SameLine();
+		if (ImGui::Button("Perform")) {
+			std::cout << (int)action << std::endl;
+			result = action;
+		}
 
 		ImGui::End();
 
@@ -234,6 +293,7 @@ const codes GUI::checkStatus(void) {
 /*Getters.*/
 const std::string& GUI::getFormat(void) { return format; }
 const float GUI::getThreshold(void) { return threshold; }
+const std::map<std::string, codes>& GUI::getFiles(void) { return files; }
 
 //Cleanup. Frees resources.
 GUI::~GUI() {

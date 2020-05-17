@@ -36,10 +36,13 @@ void Simulation::dispatch(const codes& code) {
 		running = false;
 		break;
 	case codes::COMPRESS:
-		//compressFiles();
+		compressFiles();
 		break;
 	case codes::DECOMPRESS:
-		//decompressFiles();
+		decompressFiles();
+		break;
+	case codes::FORMAT:
+		qt->setFormat(gui->getFormat());
 		break;
 
 	default:
@@ -51,3 +54,24 @@ void Simulation::dispatch(const codes& code) {
 bool Simulation::isRunning(void) { return running; }
 
 const codes Simulation::eventGenerator() { return gui->checkStatus(); }
+
+void Simulation::compressFiles() {
+	const auto& files = gui->getFiles();
+	int pos;
+	for (const auto& file : files) {
+		if (file.second == codes::COMPRESS) {
+			pos = file.first.find_last_of(".");
+			qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
+		}
+	}
+}
+void Simulation::decompressFiles() {
+	const auto& files = gui->getFiles();
+	int pos;
+	for (const auto& file : files) {
+		if (file.second == codes::DECOMPRESS) {
+			pos = file.first.find_last_of(".");
+			qt->decompressAndSave(file.first, file.first.substr(0, pos));
+		}
+	}
+}

@@ -1,14 +1,15 @@
 #pragma once
 
 #include <allegro5/allegro.h>
-#include <string>
+#include <map>
+#include "Filesystem/Filesystem.h"
 
-const enum class codes {
-	NOTHING,
+const enum class codes : int {
+	NOTHING = 0,
 	END,
 	FORMAT,
 	COMPRESS,
-	DECOMPRESS
+	DECOMPRESS,
 };
 
 class GUI {
@@ -27,6 +28,8 @@ public:
 
 	void setAllegro();
 
+	const std::map<std::string, codes>& getFiles(void);
+
 protected:
 	void initialImGuiSetup(void) const;
 
@@ -37,4 +40,10 @@ protected:
 
 	std::string format;
 	float threshold;
+
+	bool force;
+
+	std::map <std::string, codes> files;
+	codes action;
+	Filesystem fs;
 };

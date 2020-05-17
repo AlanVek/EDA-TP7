@@ -150,6 +150,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Simulation\GUI\Filesystem\Filesystem.cpp" />
     <ClCompile Include="Simulation\GUI\GUI.cpp" />
     <ClCompile Include="Simulation\GUI\imgui\imgui.cpp" />
     <ClCompile Include="Simulation\GUI\imgui\imgui_demo.cpp" />
@@ -161,6 +162,7 @@
     <ClCompile Include="Simulation\Simulation.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Simulation\GUI\Filesystem\Filesystem.h" />
     <ClInclude Include="Simulation\GUI\GUI.h" />
     <ClInclude Include="Simulation\GUI\imgui\imconfig.h" />
     <ClInclude Include="Simulation\GUI\imgui\imgui.h" />
