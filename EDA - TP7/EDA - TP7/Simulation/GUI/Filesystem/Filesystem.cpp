@@ -1,5 +1,6 @@
 #include "Filesystem.h"
 #include <boost/filesystem.hpp>
+#include <stdarg.h>
 
 /*Filesystem constructor. Sets path to current path
 and loads this->path_content.*/
@@ -12,13 +13,26 @@ Filesystem::Filesystem() {
 
 /*Returns the contents of the given path.
 If none is given, it returns the contents of this->path.*/
-const strVec& Filesystem::pathContent(const char* imgPath, bool force)
+const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count, ...)
 {
 	/*If mustUpdate is true, then path changed recently from another method.
 	If force is true, then the caller is forcing to reaload file info from path.
 	If imgPath is null or equal to this->path, then it doesn't reaload files because
 	they are already in this->path_content.*/
 	if (mustUpdate || force || (imgPath && (imgPath != path))) {
+		std::map<std::string, int> formats;
+
+		/*Gets format arguments (if any were given).*/
+		if (count) {
+			va_list args;
+			va_start(args, count);
+
+			for (int i = 0; i < count; i++)
+				formats[va_arg(args, const char*)] = 1;
+
+			va_end(args);
+		}
+
 		/*Toggles mustUpdate.*/
 		if (mustUpdate) mustUpdate = !mustUpdate;
 
@@ -45,9 +59,19 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force)
 			/*Clears file vector.*/
 			path_content.clear();
 
-			/*Loops for every file/directory in path and saves it's name to path_content.*/
+			bool loadCondition;
+			/*Loops for every file/directory in path.
+			If it's a directory, it saves it to path_content.
+			If it's a file and its format is has been passed as
+			argument, it saves it to path_content.
+			Otherwise, it skips it.*/
 			for (boost::filesystem::directory_iterator itr(p); itr != boost::filesystem::directory_iterator(); itr++) {
-				path_content.push_back(itr->path().filename().string());
+				/*Checks if it's either directory or a file with format given as argument.*/
+				loadCondition = !count || isDir(itr->path().string().c_str()) ||
+					(isFile(itr->path().string().c_str()) && formats.find(itr->path().extension().string()) != formats.end());
+
+				if (loadCondition)
+					path_content.push_back(itr->path().filename().string());
 			}
 
 			/*Updates current path.*/

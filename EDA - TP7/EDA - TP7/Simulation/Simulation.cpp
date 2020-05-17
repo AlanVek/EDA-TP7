@@ -50,7 +50,7 @@ void Simulation::compressFiles() {
 		for (const auto& file : files) {
 			if (file.second == Codes::COMPRESS) {
 				pos = file.first.find_last_of(".");
-				qt->compressAndSave(file.first, file.first.substr(0, pos) + "_comp_", gui->getThreshold());
+				qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
 			}
 		}
 
@@ -72,7 +72,7 @@ void Simulation::decompressFiles() {
 		for (const auto& file : files) {
 			if (file.second == Codes::DECOMPRESS) {
 				pos = file.first.find_last_of(".");
-				qt->decompressAndSave(file.first, file.first.substr(0, pos) + "_decomp_");
+				qt->decompressAndSave(file.first, file.first.substr(0, pos));
 			}
 		}
 
@@ -87,6 +87,7 @@ void Simulation::decompressFiles() {
 /*Sets new QuadTree target format.*/
 void Simulation::setFormat() {
 	qt->setFormat(gui->getFormat());
+	gui->updateShowStatus();
 }
 
 /*Getter.*/

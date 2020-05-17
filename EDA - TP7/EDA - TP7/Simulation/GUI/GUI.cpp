@@ -7,11 +7,13 @@
 #include <allegro5/allegro_primitives.h>
 
 namespace GUI_data {
-	const unsigned int width = 750;
-	const unsigned int height = 400;
+	const unsigned int width = 900;
+	const unsigned int height = 550;
 
 	const float minThreshold = 0.1;
 	const float maxThreshold = 1;
+
+	const char* fixedFormat = ".png";
 }
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
@@ -20,7 +22,7 @@ GUI::GUI(void) :
 	guiDisp(nullptr),
 	guiQueue(nullptr),
 	action(Codes::NOTHING),
-	force(false),
+	force(true),
 	deep(0),
 	action_msg("none.")
 {
@@ -204,8 +206,15 @@ inline void GUI::displayThreshold() {
 inline Codes GUI::displayFormat() {
 	ImGui::Text("Compressed files format: ");
 	ImGui::SameLine();
-	if (ImGui::InputText(" ~ ", &format) && format.length())
+	if (ImGui::InputText(" ~ ", &format) && format.length()) {
+		int point = format.find_last_of('.');
+
+		format = '.' + format.substr(point + 1, format.length());
+
+		force = true;
+
 		return Codes::FORMAT;
+	}
 
 	return Codes::NOTHING;
 }
@@ -214,11 +223,12 @@ inline Codes GUI::displayFormat() {
 void GUI::displayFiles() {
 	std::string path = fs.getPath();
 
-	/*Binding fs.pathContent with this->force.
+	/*Binding fs.pathContent with this->force and specified file format.
 	Helps to determine when to update file info.*/
 	const auto show = [this](const char* path = nullptr) {
-		if (force) { force = !force; return fs.pathContent(path, true); }
-		return fs.pathContent(path, false);
+		bool shouldForce = force;
+		if (force) { force = !force; }
+		return fs.pathContent(path, shouldForce, 2, GUI_data::fixedFormat, format.c_str());
 	};
 
 	ImGui::Text("Current path: ");
@@ -227,6 +237,22 @@ void GUI::displayFiles() {
 	/*Shows path.*/
 	ImGui::TextWrapped(path.c_str());
 
+	ImGui::NewLine();
+
+	/*'Select all' button.*/
+	if (ImGui::Button("Select all")) {
+		for (auto& file : files)
+			file.second = action;
+	}
+	ImGui::SameLine();
+
+	/*'Deselect all' button.*/
+	if (ImGui::Button("Deselect all")) {
+		for (auto& file : files)
+			file.second = Codes::NOTHING;
+	}
+	ImGui::NewLine();
+	ImGui::NewLine();
 	/*Loops through every file in files map.*/
 	for (const auto& file : show()) {
 		/*If it's a directory...*/

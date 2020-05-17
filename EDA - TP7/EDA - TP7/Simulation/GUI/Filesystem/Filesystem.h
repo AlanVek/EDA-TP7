@@ -9,7 +9,7 @@ public:
 
 	Filesystem();
 
-	const strVec& pathContent(const char* = nullptr, bool = false);
+	const strVec& pathContent(const char* = nullptr, bool = false, int = 0, ...);
 
 	void back();
 

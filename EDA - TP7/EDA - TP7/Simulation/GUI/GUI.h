@@ -39,6 +39,7 @@ protected:
 	inline Codes displayFormat();
 	inline void displayActions();
 	inline void displayThreshold();
+	inline void displayAllOrNone(void);
 	void displayFiles();
 	inline void displayBackButton();
 	inline Codes displayExitButton() const;
