@@ -12,7 +12,9 @@ Filesystem::Filesystem() {
 }
 
 /*Returns the contents of the given path.
-If none is given, it returns the contents of this->path.*/
+If none is given, it returns the contents of this->path.
+In both cases, if the variadic arguments are given, it filters files by
+format type of said arguments.*/
 const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count, ...)
 {
 	/*If mustUpdate is true, then path changed recently from another method.
@@ -82,6 +84,17 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count
 	/*Returns file vector.*/
 	return path_content;
 }
+/*Sets new path.*/
+void Filesystem::newPath(const std::string& newPath_) {
+	if (path != newPath_) {
+		boost::filesystem::path p(newPath_);
+
+		if (boost::filesystem::exists(p)) {
+			path = newPath_;
+			mustUpdate = true;
+		}
+	}
+}
 
 /*Getter.*/
 const std::string& Filesystem::getPath(void) { return path; }
@@ -104,4 +117,9 @@ bool Filesystem::isFile(const char* path) {
 bool Filesystem::isDir(const char* path) {
 	return boost::filesystem::is_directory(path);
 }
+
+const std::string Filesystem::currentPath(void) {
+	return boost::filesystem::current_path().string();
+};
+
 /********************************************************/

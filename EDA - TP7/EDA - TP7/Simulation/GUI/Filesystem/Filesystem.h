@@ -15,9 +15,12 @@ public:
 
 	const std::string& getPath(void);
 
+	void newPath(const std::string&);
+
 	/*Static functions.*/
 	static bool isDir(const char*);
 	static bool isFile(const char*);
+	static const std::string currentPath(void);
 private:
 
 	/*Data members.*/

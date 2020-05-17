@@ -29,6 +29,8 @@ GUI::GUI(void) :
 	format.clear();
 
 	setAllegro();
+
+	path = fs.getPath();
 }
 
 /*Initializes Allegro resources and throws different
@@ -124,6 +126,12 @@ const Codes GUI::checkStatus(void) {
 		/*Sets new ImGui window.*/
 		newWindow();
 
+		/*Text input for new path.*/
+		displayPath();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
 		/*Text input for file format.*/
 		temp = displayFormat();
 		if ((bool)temp) result = temp;
@@ -174,13 +182,14 @@ const Codes GUI::checkStatus(void) {
 
 /*Displays action buttons.*/
 inline void GUI::displayActions() {
-	ImGui::Text("Actions: ");
+	ImGui::Text("Action to perform: ");
 
 	/*Compress button.*/
 	if (ImGui::Button("Compress") && format.length()) {
 		action = Codes::COMPRESS;
 		action_msg = "compression.";
 		updateActions();
+		force = true;
 	}
 
 	/*Decompress button.*/
@@ -189,6 +198,7 @@ inline void GUI::displayActions() {
 		action = Codes::DECOMPRESS;
 		action_msg = "decompression.";
 		updateActions();
+		force = true;
 	}
 
 	/*Message with selected option.*/
@@ -219,23 +229,45 @@ inline Codes GUI::displayFormat() {
 	return Codes::NOTHING;
 }
 
+/*Displays text input for path.*/
+inline void GUI::displayPath() {
+	ImGui::Text("New path: ");
+	ImGui::SameLine();
+	ImGui::InputText(" ", &path);
+
+	if (ImGui::Button("Go"))
+		fs.newPath(path);
+
+	ImGui::SameLine();
+	if (ImGui::Button("Reset path")) {
+		path = Filesystem::currentPath();
+		fs.newPath(path);
+	}
+}
+
 /*Displays path and files/folders in path.*/
 void GUI::displayFiles() {
-	std::string path = fs.getPath();
+	std::string tempPath = fs.getPath();
 
 	/*Binding fs.pathContent with this->force and specified file format.
 	Helps to determine when to update file info.*/
 	const auto show = [this](const char* path = nullptr) {
 		bool shouldForce = force;
+		const char* showFormat;
 		if (force) { force = !force; }
-		return fs.pathContent(path, shouldForce, 2, GUI_data::fixedFormat, format.c_str());
+		if (action == Codes::COMPRESS || action == Codes::NOTHING)
+			showFormat = GUI_data::fixedFormat;
+		else
+			showFormat = format.c_str();
+
+		return fs.pathContent(path, shouldForce, 1, showFormat);
 	};
 
 	ImGui::Text("Current path: ");
 	ImGui::SameLine();
 
 	/*Shows path.*/
-	ImGui::TextWrapped(path.c_str());
+	ImGui::TextWrapped(tempPath.c_str());
 
 	ImGui::NewLine();
 
@@ -252,11 +284,11 @@ void GUI::displayFiles() {
 			file.second = Codes::NOTHING;
 	}
 	ImGui::NewLine();
-	ImGui::NewLine();
+	ImGui::Text("-----------------------------------");
 	/*Loops through every file in files map.*/
 	for (const auto& file : show()) {
 		/*If it's a directory...*/
-		if (Filesystem::isDir((path + '\\' + file).c_str())) {
+		if (Filesystem::isDir((tempPath + '\\' + file).c_str())) {
 			/*Sets a button with its name.*/
 			if (ImGui::Button(file.c_str())) {
 				/*If the button is pressed, the path changes and
@@ -264,21 +296,23 @@ void GUI::displayFiles() {
 				show(file.c_str());
 				files.clear();
 				deep++;
+				tempPath += '\\' + file;
 			}
 		}
 
 		/*If it's a file...*/
-		else if (Filesystem::isFile((path + '\\' + file).c_str())) {
+		else if (Filesystem::isFile((tempPath + '\\' + file).c_str())) {
 			/*Sets a checkbox with its name. Updates file's value in map.*/
-			if (ImGui::Checkbox(file.c_str(), (bool*)&files[path + '\\' + file])) {
+			if (ImGui::Checkbox(file.c_str(), (bool*)&files[tempPath + '\\' + file])) {
 				/*Replaces action in file's value in map.*/
-				if ((bool)files[path + '\\' + file])
-					files[path + '\\' + file] = action;
+				if ((bool)files[tempPath + '\\' + file])
+					files[tempPath + '\\' + file] = action;
 			}
 
 			ImGui::NextColumn();
 		}
 	}
+	ImGui::Text("-----------------------------------");
 }
 
 /*Displays button to go back.*/
@@ -339,8 +373,7 @@ const std::map<std::string, Codes>& GUI::getFiles(void) const { return files; }
 /*Updates action in selected files.*/
 inline void GUI::updateActions() {
 	for (auto& file : files) {
-		if ((bool)file.second)
-			file.second = action;
+		file.second = Codes::NOTHING;
 	}
 }
 

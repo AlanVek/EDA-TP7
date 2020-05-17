@@ -36,10 +36,10 @@ protected:
 
 	/*Window displayers.*/
 	inline void newWindow() const;
+	inline void displayPath();
 	inline Codes displayFormat();
 	inline void displayActions();
 	inline void displayThreshold();
-	inline void displayAllOrNone(void);
 	void displayFiles();
 	inline void displayBackButton();
 	inline Codes displayExitButton() const;
@@ -64,7 +64,7 @@ protected:
 
 	/*Data members modifiable by user.*/
 	float threshold;
-	std::string format;
+	std::string format, path;
 
 	/*File handling.*/
 	Filesystem fs;
