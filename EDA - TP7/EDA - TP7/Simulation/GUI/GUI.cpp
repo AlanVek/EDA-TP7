@@ -15,17 +15,18 @@ namespace GUI_data {
 }
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
-GUI::GUI(void) : threshold(GUI_data::minThreshold) {
+GUI::GUI(void) :
+	threshold(GUI_data::minThreshold),
+	guiDisp(nullptr),
+	guiQueue(nullptr),
+	action(Codes::NOTHING),
+	force(false),
+	deep(0),
+	action_msg("none.")
+{
 	format.clear();
 
-	guiDisp = nullptr;
-	guiQueue = nullptr;
-	action = Codes::NOTHING;
 	setAllegro();
-
-	force = false;
-	deep = 0;
-	action_msg = "none.";
 }
 
 /*Initializes Allegro resources and throws different
@@ -177,6 +178,7 @@ inline void GUI::displayActions() {
 	if (ImGui::Button("Compress") && format.length()) {
 		action = Codes::COMPRESS;
 		action_msg = "compression.";
+		updateActions();
 	}
 
 	/*Decompress button.*/
@@ -184,6 +186,7 @@ inline void GUI::displayActions() {
 	if (ImGui::Button("Decompress") && format.length()) {
 		action = Codes::DECOMPRESS;
 		action_msg = "decompression.";
+		updateActions();
 	}
 
 	/*Message with selected option.*/
@@ -199,13 +202,12 @@ inline void GUI::displayThreshold() {
 
 /*Displays text input for file format.*/
 inline Codes GUI::displayFormat() {
-	Codes result = Codes::NOTHING;
 	ImGui::Text("Compressed files format: ");
 	ImGui::SameLine();
 	if (ImGui::InputText(" ~ ", &format) && format.length())
-		result = Codes::FORMAT;
+		return Codes::FORMAT;
 
-	return result;
+	return Codes::NOTHING;
 }
 
 /*Displays path and files/folders in path.*/
@@ -263,29 +265,25 @@ inline void GUI::displayBackButton() {
 }
 
 /*Displays exit button.*/
-inline Codes GUI::displayExitButton() {
-	Codes result = Codes::NOTHING;
-
+inline Codes GUI::displayExitButton() const {
 	/*If pressed, it returns Codes::END.*/
 	if (ImGui::Button("Exit"))
-		result = Codes::END;
+		return Codes::END;
 
-	return result;
+	return Codes::NOTHING;
 }
 
 /*Displays perform button.*/
-inline Codes GUI::displayPerformButton() {
-	Codes result = Codes::NOTHING;
-
+inline Codes GUI::displayPerformButton() const {
 	/*If pressed, it returns the corresponding action.*/
-	if (ImGui::Button("Perform")) {
-		result = action;
-	}
-	return result;
+	if (ImGui::Button("Perform"))
+		return action;
+
+	return Codes::NOTHING;
 }
 
 /*Sets a new ImGUI frame and window.*/
-inline void GUI::newWindow() {
+inline void GUI::newWindow() const {
 	//Sets new ImGUI frame.
 	ImGui_ImplAllegro5_NewFrame();
 	ImGui::NewFrame();
@@ -299,7 +297,7 @@ inline void GUI::newWindow() {
 }
 
 /*Rendering.*/
-inline void GUI::render() {
+inline void GUI::render() const {
 	ImGui::Render();
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 	ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
@@ -308,9 +306,17 @@ inline void GUI::render() {
 }
 
 /*Getters.*/
-const std::string& GUI::getFormat(void) { return format; }
-const float GUI::getThreshold(void) { return threshold; }
-const std::map<std::string, Codes>& GUI::getFiles(void) { return files; }
+const std::string& GUI::getFormat(void) const { return format; }
+const float GUI::getThreshold(void) const { return threshold; }
+const std::map<std::string, Codes>& GUI::getFiles(void) const { return files; }
+
+/*Updates action in selected files.*/
+inline void GUI::updateActions() {
+	for (auto& file : files) {
+		if ((bool)file.second)
+			file.second = action;
+	}
+}
 
 /*Toggles 'force' variable.*/
 void GUI::updateShowStatus() { force = !force; }

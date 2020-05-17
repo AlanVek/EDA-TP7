@@ -21,10 +21,10 @@ public:
 
 	const Codes checkStatus(void);
 
-	const std::string& getFormat();
-	const float getThreshold();
+	const std::string& getFormat() const;
+	const float getThreshold() const;
 
-	const std::map<std::string, Codes>& getFiles(void);
+	const std::map<std::string, Codes>& getFiles(void) const;
 
 	void updateShowStatus();
 
@@ -35,15 +35,17 @@ protected:
 	void initialImGuiSetup(void) const;
 
 	/*Window displayers.*/
-	inline void newWindow();
+	inline void newWindow() const;
 	inline Codes displayFormat();
 	inline void displayActions();
 	inline void displayThreshold();
 	void displayFiles();
 	inline void displayBackButton();
-	inline Codes displayExitButton();
-	inline Codes displayPerformButton();
-	inline void render();
+	inline Codes displayExitButton() const;
+	inline Codes displayPerformButton() const;
+	inline void render() const;
+
+	inline void updateActions();
 
 	/*Exit and resize events.*/
 	bool checkGUIEvents(void);
