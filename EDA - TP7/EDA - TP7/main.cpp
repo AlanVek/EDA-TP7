@@ -1,23 +1,24 @@
 #include <iostream>
 #include "Simulation/Simulation.h"
 int main() {
+	int result = -1;
+
 	try {
 		Simulation mySim;
 
-		/*Gets first data from GUI.*/
-		mySim.getFirstData();
-
-		/*Generates event from GUI.*/
-		auto ev = mySim.eventGenerator();
+		/*Creates a GUI event*/
+		Codes ev;
 
 		/*While user hasn't asked to exit...*/
 		while (mySim.isRunning()) {
-			/*Dispatches event.*/
-			mySim.dispatch(ev);
-
 			/*Gets new event from GUI.*/
 			ev = mySim.eventGenerator();
+
+			/*Dispatches event.*/
+			mySim.dispatch(ev);
 		}
+
+		result = 0;
 	}
 
 	/*Exception handler.*/
@@ -25,5 +26,5 @@ int main() {
 		std::cout << e.what() << std::endl;
 	}
 
-	return 0;
+	return result;
 }

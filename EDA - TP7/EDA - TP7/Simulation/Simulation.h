@@ -8,18 +8,17 @@ public:
 	Simulation(void);
 	~Simulation(void);
 
-	void dispatch(const codes&);
+	void dispatch(const Codes&);
 
-	const codes eventGenerator();
+	const Codes eventGenerator();
 
 	bool isRunning(void);
 
-	void getFirstData(void);
+private:
 
 	void decompressFiles();
 	void compressFiles();
-
-private:
+	void setFormat();
 	/*Prevents from using copy constructor.*/
 	Simulation(const Simulation&);
 

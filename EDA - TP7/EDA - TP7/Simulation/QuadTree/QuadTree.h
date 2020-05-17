@@ -8,6 +8,7 @@ using intVector = std::vector<unsigned int>;
 
 class QuadTree {
 public:
+	QuadTree();
 	QuadTree(const std::string&);
 
 	~QuadTree();

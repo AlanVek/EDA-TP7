@@ -12,11 +12,6 @@ namespace GUI_data {
 
 	const float minThreshold = 0.1;
 	const float maxThreshold = 1;
-
-	const enum {
-		okFile,
-		badFile
-	};
 }
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
@@ -25,7 +20,7 @@ GUI::GUI(void) : threshold(GUI_data::minThreshold) {
 
 	guiDisp = nullptr;
 	guiQueue = nullptr;
-	action = codes::NOTHING;
+	action = Codes::NOTHING;
 	setAllegro();
 
 	force = false;
@@ -85,62 +80,6 @@ void GUI::initialImGuiSetup(void) const {
 	al_clear_to_color(al_map_rgb(0, 0, 0));
 }
 
-//First GUI run. Loops until a username has been given.
-bool GUI::firstRun(void) {
-	bool endOfSetUp = false;
-	bool result = true;
-
-	al_set_target_backbuffer(guiDisp);
-
-	//Drawing loop.
-	while (!endOfSetUp) {
-		//Clears event queue and checks if user pressed ESC or closed display.
-		if (checkGUIEvents()) {
-			endOfSetUp = true;
-			result = false;
-		}
-		else {
-			//Starts the Dear ImGui frame.
-			ImGui_ImplAllegro5_NewFrame();
-			ImGui::NewFrame();
-
-			//Sets window.
-			ImGui::SetNextWindowSize(ImVec2(GUI_data::width, GUI_data::height / 2));
-			ImGui::SetNextWindowPos(ImVec2(0, 0));
-			ImGui::Begin("Initial Setup");
-
-			/*Text input for compressed file format.*/
-			ImGui::Text("Compressed files format: ");
-			ImGui::SameLine();
-			ImGui::InputText(" ~ ", &format);
-			ImGui::NewLine();
-			ImGui::NewLine();
-
-			/*Exit button.*/
-			if (ImGui::Button("Exit")) {
-				endOfSetUp = true;
-				result = false;
-			}
-
-			ImGui::SameLine();
-
-			/*Button to continue.*/
-			if (ImGui::Button("Continue") && format.length()) {
-				endOfSetUp = true;
-			}
-
-			ImGui::End();
-
-			//Rendering.
-			ImGui::Render();
-			al_clear_to_color(al_map_rgb(0, 0, 0));
-			ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
-
-			al_flip_display();
-		}
-	}
-	return result;
-}
 /*Checks if user pressed ESC or closed display.
 It also deals with display resizing.*/
 bool GUI::checkGUIEvents(void) {
@@ -168,127 +107,215 @@ bool GUI::checkGUIEvents(void) {
 }
 
 //Cycle that shows menu (called with every iteration).
-const codes GUI::checkStatus(void) {
-	codes result = codes::NOTHING;
+const Codes GUI::checkStatus(void) {
+	Codes result = Codes::NOTHING;
+	Codes temp;
 
 	al_set_target_backbuffer(guiDisp);
 
-	//If user pressed ESC or closed display, returns codes::END.
+	//If user pressed ESC or closed display, returns Codes::END.
 	if (checkGUIEvents()) {
-		result = codes::END;
+		result = Codes::END;
 	}
 	else {
-		//Sets new ImGUI frame.
-		ImGui_ImplAllegro5_NewFrame();
-		ImGui::NewFrame();
-
-		//Sets new window.
-		ImGui::SetNextWindowSize(ImVec2(GUI_data::width, GUI_data::height));
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::Begin("EDA - TP6");
+		/*Sets new ImGui window.*/
+		newWindow();
 
 		/*Text input for file format.*/
-		ImGui::Text("Compressed files format: ");
-		ImGui::SameLine();
-		if (ImGui::InputText(" ~ ", &format) && format.length())
-			result = codes::FORMAT;
+		temp = displayFormat();
+		if ((bool)temp) result = temp;
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Actions for compression and decompression.*/
+		displayActions();
 
 		ImGui::NewLine();
 		ImGui::NewLine();
 
 		/*Slider for threshold.*/
-		ImGui::Text("Compression threshold:   ");
-		ImGui::SameLine();
-		ImGui::SliderFloat(" - ", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-		ImGui::Text("Actions: ");
-
-		if (ImGui::Button("Compress")) {
-			action = codes::COMPRESS;
-			action_msg = "compression.";
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Decompress")) {
-			action = codes::DECOMPRESS;
-			action_msg = "decompression.";
-		}
-		ImGui::Text(("Selected: " + action_msg).c_str());
-
-		const auto show = [this](const char* path = nullptr) {
-			if (force) { force = !force; return fs.pathContent(path, true); }
-			return fs.pathContent(path, false);
-		};
+		displayThreshold();
 
 		ImGui::NewLine();
 		ImGui::NewLine();
 
-		ImGui::Text("Current path: ");
-		ImGui::SameLine();
+		/*Files from path.*/
+		displayFiles();
 
-		std::string path = fs.getPath();
-		ImGui::TextWrapped(path.c_str());
-		for (const auto& file : show()) {
-			if (Filesystem::isDir((path + '\\' + file).c_str())) {
-				if (ImGui::Button(file.c_str())) {
-					show(file.c_str());
-					files.clear();
-					deep++;
-				}
-			}
-			else {
-				if (ImGui::Checkbox(file.c_str(), (bool*)&files[path + '\\' + file])) {
-					if ((bool)files[path + '\\' + file])
-						files[path + '\\' + file] = action;
-					else
-						files[path + '\\' + file] = codes::NOTHING;
-				}
-
-				ImGui::NextColumn();
-			}
-		}
-
-		/*Buttons for compression and decompression.*/
 		ImGui::NewLine();
 		ImGui::NewLine();
 
 		/*Back button.*/
-		if (ImGui::ArrowButton("Back", ImGuiDir_Left) && deep) {
-			fs.back();
-			deep--;
-		}
+		displayBackButton();
+
 		ImGui::SameLine();
+
 		/*Exit button.*/
-		if (ImGui::Button("Exit"))
-			result = codes::END;
+		temp = displayExitButton();
+		if ((bool)temp) result = temp;
+
+		ImGui::SameLine();
 
 		/*Perform button.*/
-		ImGui::SameLine();
-		if (ImGui::Button("Perform")) {
-			result = action;
-		}
+		temp = displayPerformButton();
+		if ((bool)temp) result = temp;
 
 		ImGui::End();
 
-		//Rendering.
-		ImGui::Render();
-		al_clear_to_color(al_map_rgb(0, 0, 0));
-		ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
-
-		al_flip_display();
+		/*Rendering.*/
+		render();
 	}
 	return result;
+}
+
+/*Displays action buttons.*/
+inline void GUI::displayActions() {
+	ImGui::Text("Actions: ");
+
+	/*Compress button.*/
+	if (ImGui::Button("Compress") && format.length()) {
+		action = Codes::COMPRESS;
+		action_msg = "compression.";
+	}
+
+	/*Decompress button.*/
+	ImGui::SameLine();
+	if (ImGui::Button("Decompress") && format.length()) {
+		action = Codes::DECOMPRESS;
+		action_msg = "decompression.";
+	}
+
+	/*Message with selected option.*/
+	ImGui::Text(("Selected: " + action_msg).c_str());
+}
+
+/*Displays threshold slider.*/
+inline void GUI::displayThreshold() {
+	ImGui::Text("Compression threshold:   ");
+	ImGui::SameLine();
+	ImGui::SliderFloat(" - ", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
+}
+
+/*Displays text input for file format.*/
+inline Codes GUI::displayFormat() {
+	Codes result = Codes::NOTHING;
+	ImGui::Text("Compressed files format: ");
+	ImGui::SameLine();
+	if (ImGui::InputText(" ~ ", &format) && format.length())
+		result = Codes::FORMAT;
+
+	return result;
+}
+
+/*Displays path and files/folders in path.*/
+void GUI::displayFiles() {
+	std::string path = fs.getPath();
+
+	/*Binding fs.pathContent with this->force.
+	Helps to determine when to update file info.*/
+	const auto show = [this](const char* path = nullptr) {
+		if (force) { force = !force; return fs.pathContent(path, true); }
+		return fs.pathContent(path, false);
+	};
+
+	ImGui::Text("Current path: ");
+	ImGui::SameLine();
+
+	/*Shows path.*/
+	ImGui::TextWrapped(path.c_str());
+
+	/*Loops through every file in files map.*/
+	for (const auto& file : show()) {
+		/*If it's a directory...*/
+		if (Filesystem::isDir((path + '\\' + file).c_str())) {
+			/*Sets a button with its name.*/
+			if (ImGui::Button(file.c_str())) {
+				/*If the button is pressed, the path changes and
+				goes inside the folder.*/
+				show(file.c_str());
+				files.clear();
+				deep++;
+			}
+		}
+
+		/*If it's a file...*/
+		else if (Filesystem::isFile((path + '\\' + file).c_str())) {
+			/*Sets a checkbox with its name. Updates file's value in map.*/
+			if (ImGui::Checkbox(file.c_str(), (bool*)&files[path + '\\' + file])) {
+				/*Replaces action in file's value in map.*/
+				if ((bool)files[path + '\\' + file])
+					files[path + '\\' + file] = action;
+			}
+
+			ImGui::NextColumn();
+		}
+	}
+}
+
+/*Displays button to go back.*/
+inline void GUI::displayBackButton() {
+	/*When pressed, it calls fs.back(), which updates the path.*/
+	if (ImGui::ArrowButton("Back", ImGuiDir_Left) && deep) {
+		fs.back();
+		deep--;
+	}
+}
+
+/*Displays exit button.*/
+inline Codes GUI::displayExitButton() {
+	Codes result = Codes::NOTHING;
+
+	/*If pressed, it returns Codes::END.*/
+	if (ImGui::Button("Exit"))
+		result = Codes::END;
+
+	return result;
+}
+
+/*Displays perform button.*/
+inline Codes GUI::displayPerformButton() {
+	Codes result = Codes::NOTHING;
+
+	/*If pressed, it returns the corresponding action.*/
+	if (ImGui::Button("Perform")) {
+		result = action;
+	}
+	return result;
+}
+
+/*Sets a new ImGUI frame and window.*/
+inline void GUI::newWindow() {
+	//Sets new ImGUI frame.
+	ImGui_ImplAllegro5_NewFrame();
+	ImGui::NewFrame();
+
+	//Sets new window positioned at (0,0).
+	ImGui::SetNextWindowSize(ImVec2(GUI_data::width, GUI_data::height));
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+
+	/*Begins window and sets title.*/
+	ImGui::Begin("EDA - TP7");
+}
+
+/*Rendering.*/
+inline void GUI::render() {
+	ImGui::Render();
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
+
+	al_flip_display();
 }
 
 /*Getters.*/
 const std::string& GUI::getFormat(void) { return format; }
 const float GUI::getThreshold(void) { return threshold; }
-const std::map<std::string, codes>& GUI::getFiles(void) { return files; }
+const std::map<std::string, Codes>& GUI::getFiles(void) { return files; }
 
+/*Toggles 'force' variable.*/
 void GUI::updateShowStatus() { force = !force; }
 
-//Cleanup. Frees resources.
+/*Cleanup. Frees resources.*/
 GUI::~GUI() {
 	ImGui_ImplAllegro5_Shutdown();
 	ImGui::DestroyContext();

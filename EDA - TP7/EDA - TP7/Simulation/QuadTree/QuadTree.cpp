@@ -16,6 +16,8 @@ namespace treeData {
 	};
 }
 
+QuadTree::QuadTree() {};
+
 /*QuadTree constructor. Saves format.*/
 QuadTree::QuadTree(const std::string& format) {
 	setFormat(format);

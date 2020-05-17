@@ -5,66 +5,56 @@
 Simulation::Simulation(void) : running(true)
 {
 	gui = new GUI;
-	qt = nullptr;
-}
-
-//Gets first data input from GUI.
-void Simulation::getFirstData(void) {
-	/*If user asked to leave, running will be False
-	and program will exit.*/
-	running = gui->firstRun();
-
-	/*If running is true, then user loaded
-	a format in which to compress files.*/
-	if (running) {
-		qt = new QuadTree(gui->getFormat());
-	}
-}
-
-//Simulation destructor. Deletes used resources.
-Simulation::~Simulation() {
-	if (gui)
-		delete gui;
-	if (qt)
-		delete qt;
+	qt = new QuadTree;
 }
 
 //Polls GUI and dispatches according to button code.
-void Simulation::dispatch(const codes& code) {
+void Simulation::dispatch(const Codes& code) {
 	switch (code) {
-	case codes::END:
+		/*User asked to exit.*/
+	case Codes::END:
 		running = false;
 		break;
-	case codes::COMPRESS:
+
+		/*User asked to compress.*/
+	case Codes::COMPRESS:
 		compressFiles();
 		break;
-	case codes::DECOMPRESS:
+
+		/*User asked to decompress.*/
+	case Codes::DECOMPRESS:
 		decompressFiles();
 		break;
-	case codes::FORMAT:
-		qt->setFormat(gui->getFormat());
-		break;
 
+		/*User changed target file format.*/
+	case Codes::FORMAT:
+		setFormat();
+		break;
 	default:
 		break;
 	}
 }
 
-//Getter.
-bool Simulation::isRunning(void) { return running; }
+/*Generates event from GUI.*/
+const Codes Simulation::eventGenerator() { return gui->checkStatus(); }
 
-const codes Simulation::eventGenerator() { return gui->checkStatus(); }
-
+/*Compresses files.*/
 void Simulation::compressFiles() {
 	try {
+		/*Gets files from GUI.*/
 		const auto& files = gui->getFiles();
 		int pos;
+
+		/*Loops through every file and crompressed the ones
+		marked with Codes::COMPRESS.*/
 		for (const auto& file : files) {
-			if (file.second == codes::COMPRESS) {
+			if (file.second == Codes::COMPRESS) {
 				pos = file.first.find_last_of(".");
-				qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
+				qt->compressAndSave(file.first, file.first.substr(0, pos) + "_comp_", gui->getThreshold());
 			}
 		}
+
+		/*Tells GUI to update file list.*/
 		gui->updateShowStatus();
 	}
 	catch (std::exception& e) {
@@ -73,17 +63,39 @@ void Simulation::compressFiles() {
 }
 void Simulation::decompressFiles() {
 	try {
+		/*Gets files from GUI.*/
 		const auto& files = gui->getFiles();
 		int pos;
+
+		/*Loops through every file and crompressed the ones
+		marked with Codes::DECOMPRESS.*/
 		for (const auto& file : files) {
-			if (file.second == codes::DECOMPRESS) {
+			if (file.second == Codes::DECOMPRESS) {
 				pos = file.first.find_last_of(".");
-				qt->decompressAndSave(file.first, file.first.substr(0, pos));
+				qt->decompressAndSave(file.first, file.first.substr(0, pos) + "_decomp_");
 			}
 		}
+
+		/*Tells GUI to update file list.*/
 		gui->updateShowStatus();
 	}
 	catch (std::exception& e) {
 		std::cout << e.what() << std::endl;
 	}
+}
+
+/*Sets new QuadTree target format.*/
+void Simulation::setFormat() {
+	qt->setFormat(gui->getFormat());
+}
+
+/*Getter.*/
+bool Simulation::isRunning(void) { return running; }
+
+/*Simulation destructor. Deletes used resources.*/
+Simulation::~Simulation() {
+	if (gui)
+		delete gui;
+	if (qt)
+		delete qt;
 }
