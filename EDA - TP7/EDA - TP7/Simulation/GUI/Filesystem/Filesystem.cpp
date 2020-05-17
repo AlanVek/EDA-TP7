@@ -1,6 +1,6 @@
 #include "Filesystem.h"
 #include <boost/filesystem.hpp>
-#include <iostream>
+
 Filesystem::Filesystem() {
 	mustUpdate = true;
 	pathContent(boost::filesystem::current_path().string().c_str());

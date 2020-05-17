@@ -48,4 +48,7 @@ protected:
 	std::map <std::string, codes> files;
 	codes action;
 	Filesystem fs;
+	int deep;
+
+	std::string action_msg;
 };

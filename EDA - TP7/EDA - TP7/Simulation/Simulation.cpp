@@ -1,5 +1,5 @@
 #include "Simulation.h"
-#include <exception>
+#include <iostream>
 
 //Simulation constructor.
 Simulation::Simulation(void) : running(true)
@@ -56,24 +56,34 @@ bool Simulation::isRunning(void) { return running; }
 const codes Simulation::eventGenerator() { return gui->checkStatus(); }
 
 void Simulation::compressFiles() {
-	const auto& files = gui->getFiles();
-	int pos;
-	for (const auto& file : files) {
-		if (file.second == codes::COMPRESS) {
-			pos = file.first.find_last_of(".");
-			qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
+	try {
+		const auto& files = gui->getFiles();
+		int pos;
+		for (const auto& file : files) {
+			if (file.second == codes::COMPRESS) {
+				pos = file.first.find_last_of(".");
+				qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
+			}
 		}
+		gui->updateShowStatus();
 	}
-	gui->updateShowStatus();
+	catch (std::exception& e) {
+		std::cout << e.what() << std::endl;
+	}
 }
 void Simulation::decompressFiles() {
-	const auto& files = gui->getFiles();
-	int pos;
-	for (const auto& file : files) {
-		if (file.second == codes::DECOMPRESS) {
-			pos = file.first.find_last_of(".");
-			qt->decompressAndSave(file.first, file.first.substr(0, pos));
+	try {
+		const auto& files = gui->getFiles();
+		int pos;
+		for (const auto& file : files) {
+			if (file.second == codes::DECOMPRESS) {
+				pos = file.first.find_last_of(".");
+				qt->decompressAndSave(file.first, file.first.substr(0, pos));
+			}
 		}
+		gui->updateShowStatus();
 	}
-	gui->updateShowStatus();
+	catch (std::exception& e) {
+		std::cout << e.what() << std::endl;
+	}
 }

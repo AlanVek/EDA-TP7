@@ -2,13 +2,9 @@
 #include "imgui/imgui_impl_allegro5.h"
 #include "imgui/imgui_stdlib.h"
 #include "GUI.h"
-#include <exception>
 #include <allegro5/keyboard.h>
 #include <allegro5/mouse.h>
 #include <allegro5/allegro_primitives.h>
-#include <boost/filesystem.hpp>
-
-#include <iostream>
 
 namespace GUI_data {
 	const unsigned int width = 750;
@@ -33,6 +29,8 @@ GUI::GUI(void) : threshold(GUI_data::minThreshold) {
 	setAllegro();
 
 	force = false;
+	deep = 0;
+	action_msg = "none.";
 }
 
 /*Initializes Allegro resources and throws different
@@ -192,7 +190,8 @@ const codes GUI::checkStatus(void) {
 		/*Text input for file format.*/
 		ImGui::Text("Compressed files format: ");
 		ImGui::SameLine();
-		ImGui::InputText(" ~ ", &format);
+		if (ImGui::InputText(" ~ ", &format) && format.length())
+			result = codes::FORMAT;
 
 		ImGui::NewLine();
 		ImGui::NewLine();
@@ -204,15 +203,18 @@ const codes GUI::checkStatus(void) {
 
 		ImGui::NewLine();
 		ImGui::NewLine();
-		ImGui::Text("Actions ");
+		ImGui::Text("Actions: ");
 
 		if (ImGui::Button("Compress")) {
 			action = codes::COMPRESS;
+			action_msg = "compression.";
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Decompress")) {
 			action = codes::DECOMPRESS;
+			action_msg = "decompression.";
 		}
+		ImGui::Text(("Selected: " + action_msg).c_str());
 
 		const auto show = [this](const char* path = nullptr) {
 			if (force) { force = !force; return fs.pathContent(path, true); }
@@ -226,12 +228,13 @@ const codes GUI::checkStatus(void) {
 		ImGui::SameLine();
 
 		std::string path = fs.getPath();
-		ImGui::Text(path.c_str());
+		ImGui::TextWrapped(path.c_str());
 		for (const auto& file : show()) {
 			if (Filesystem::isDir((path + '\\' + file).c_str())) {
 				if (ImGui::Button(file.c_str())) {
 					show(file.c_str());
 					files.clear();
+					deep++;
 				}
 			}
 			else {
@@ -250,13 +253,15 @@ const codes GUI::checkStatus(void) {
 		ImGui::NewLine();
 		ImGui::NewLine();
 
+		/*Back button.*/
+		if (ImGui::ArrowButton("Back", ImGuiDir_Left) && deep) {
+			fs.back();
+			deep--;
+		}
+		ImGui::SameLine();
 		/*Exit button.*/
 		if (ImGui::Button("Exit"))
 			result = codes::END;
-
-		ImGui::SameLine();
-		if (ImGui::Button("Back"))
-			fs.back();
 
 		/*Perform button.*/
 		ImGui::SameLine();
