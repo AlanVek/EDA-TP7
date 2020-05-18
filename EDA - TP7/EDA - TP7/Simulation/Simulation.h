@@ -16,9 +16,11 @@ public:
 
 private:
 
-	void decompressFiles();
-	void compressFiles();
+	template <class T>
+	void perform(const T&, const Events&);
+
 	void setFormat();
+
 	/*Prevents from using copy constructor.*/
 	Simulation(const Simulation&);
 

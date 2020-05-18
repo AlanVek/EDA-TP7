@@ -1,5 +1,8 @@
 #include "Simulation.h"
 #include <iostream>
+#include <functional>
+
+using namespace std::placeholders;
 
 //Simulation constructor.
 Simulation::Simulation(void) : running(true)
@@ -18,12 +21,12 @@ void Simulation::dispatch(const Events& code) {
 
 		/*User asked to compress.*/
 	case Events::COMPRESS:
-		compressFiles();
+		perform(std::bind(&QuadTree::compressAndSave, qt, _1, _2, gui->getThreshold()), Events::COMPRESS);
 		break;
 
 		/*User asked to decompress.*/
 	case Events::DECOMPRESS:
-		decompressFiles();
+		perform(std::bind(&QuadTree::decompressAndSave, qt, _1, _2), Events::DECOMPRESS);
 		break;
 
 		/*User changed target file format.*/
@@ -38,41 +41,21 @@ void Simulation::dispatch(const Events& code) {
 /*Generates event from GUI.*/
 const Events Simulation::eventGenerator() { return gui->checkStatus(); }
 
-/*Compresses files.*/
-void Simulation::compressFiles() {
+/*Applies a function that takes two strings to
+every file in gui->getFiles() marked with 'ev'.*/
+template <class T>
+void Simulation::perform(const T& apply, const Events& ev) {
 	try {
 		/*Gets files from GUI.*/
 		const auto& files = gui->getFiles();
 		int pos;
 
-		/*Loops through every file and crompressed the ones
-		marked with Events::COMPRESS.*/
+		/*Loops through every file and applies function to
+		the ones marked with 'ev'.*/
 		for (const auto& file : files) {
-			if (file.second == Events::COMPRESS) {
+			if (file.second == ev) {
 				pos = file.first.find_last_of(".");
-				qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
-			}
-		}
-
-		/*Tells GUI to update file list.*/
-		gui->updateShowStatus();
-	}
-	catch (std::exception& e) {
-		std::cout << e.what() << std::endl;
-	}
-}
-void Simulation::decompressFiles() {
-	try {
-		/*Gets files from GUI.*/
-		const auto& files = gui->getFiles();
-		int pos;
-
-		/*Loops through every file and crompressed the ones
-		marked with Events::DECOMPRESS.*/
-		for (const auto& file : files) {
-			if (file.second == Events::DECOMPRESS) {
-				pos = file.first.find_last_of(".");
-				qt->decompressAndSave(file.first, file.first.substr(0, pos));
+				apply(file.first, file.first.substr(0, pos));
 			}
 		}
 
