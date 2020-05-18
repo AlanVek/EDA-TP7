@@ -11,10 +11,9 @@ Filesystem::Filesystem() {
 	pathContent(boost::filesystem::current_path().string().c_str());
 }
 
-/*Returns the contents of the given path.
-If none is given, it returns the contents of this->path.
-In both cases, if the variadic arguments are given, it filters files by
-format type of said arguments.*/
+/*Returns the contents of the given path. If none is given,
+it returns the contents of this->path. In both cases, if the variadic
+arguments are given, it filters files by format type of said arguments.*/
 const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count, ...)
 {
 	/*If mustUpdate is true, then path changed recently from another method.
@@ -62,11 +61,9 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count
 			path_content.clear();
 
 			bool loadCondition;
-			/*Loops for every file/directory in path.
-			If it's a directory, it saves it to path_content.
-			If it's a file and its format is has been passed as
-			argument, it saves it to path_content.
-			Otherwise, it skips it.*/
+			/*Loops for every file/directory in path. If it's a directory, it saves
+			it to path_content. If it's a file and its format is has been passed as
+			argument, it saves it to path_content. Otherwise, it skips it.*/
 			for (boost::filesystem::directory_iterator itr(p); itr != boost::filesystem::directory_iterator(); itr++) {
 				/*Checks if it's either directory or a file with format given as argument.*/
 				loadCondition = !count || isDir(itr->path().string().c_str()) ||
@@ -118,6 +115,7 @@ bool Filesystem::isDir(const char* path) {
 	return boost::filesystem::is_directory(path);
 }
 
+/*Returns current path.*/
 const std::string Filesystem::currentPath(void) {
 	return boost::filesystem::current_path().string();
 };

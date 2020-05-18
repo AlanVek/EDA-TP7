@@ -126,22 +126,15 @@ inline void GUI::displayActions() {
 	};
 
 	/*Compress button.*/
-	displayButton("Compress", std::bind(button_callback, Codes::COMPRESS, "compression."));
+	displayWidget("Compress", std::bind(std::cref(button_callback), Codes::COMPRESS, "compression."));
 	ImGui::SameLine();
 
 	/*Decompress button.*/
-	displayButton("Decompress", std::bind(button_callback, Codes::DECOMPRESS, "decompression."));
+	displayWidget("Decompress", std::bind(std::cref(button_callback), Codes::DECOMPRESS, "decompression."));
 	ImGui::SameLine();
 
 	/*Message with selected option.*/
 	ImGui::Text(("Selected: " + action_msg).c_str());
-}
-
-/*Displays threshold slider.*/
-inline void GUI::displayThreshold() {
-	ImGui::Text("Compression threshold: ");
-	ImGui::SameLine();
-	ImGui::SliderFloat(" - ", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
 }
 
 /*Displays text input for file format.*/
@@ -158,41 +151,41 @@ inline Codes GUI::displayFormat() {
 
 	return Codes::NOTHING;
 }
-
+#include <iostream>
 /*Displays text input for path.*/
 inline void GUI::displayPath() {
 	ImGui::Text("New path:              ");
 	ImGui::SameLine();
-	if (ImGui::InputText("", &path, ImGuiInputTextFlags_CharsHexadecimal));
+	ImGui::InputText(" ", &path, ImGuiInputTextFlags_CharsHexadecimal);
 
 	ImGui::SameLine();
 
-	displayButton("Go", std::bind(&Filesystem::newPath, &fs, path));
+	displayWidget("Go", [this]() {std::cout << path << std::endl; fs.newPath(path); });/*std::bind(&Filesystem::newPath, &fs, std::cref(path))*/;
 	ImGui::SameLine();
 
-	displayButton("Reset path", std::bind(&Filesystem::newPath, &fs, Filesystem::currentPath()));
+	displayWidget("Reset path", std::bind(&Filesystem::newPath, &fs, Filesystem::currentPath()));
 }
 
 /*Displays path and files/folders in path.*/
 void GUI::displayFiles() {
-	path = fs.getPath();
+	std::string tempPath = fs.getPath();
 
 	ImGui::Text("Current path: ");
 	ImGui::SameLine();
 
 	/*Shows path.*/
-	ImGui::TextWrapped(path.c_str());
+	ImGui::TextWrapped(tempPath.c_str());
 
 	ImGui::NewLine();
 
 	/*'Select all' button.*/
 
-	displayButton("Select All",
+	displayWidget("Select All",
 		[this]() {for (auto& file : files)file.second = action; });
 
 	ImGui::SameLine();
 
-	displayButton("Deselect all",
+	displayWidget("Deselect all",
 		[this]() {for (auto& file : files) file.second = action; });
 
 	ImGui::NewLine();
@@ -200,43 +193,35 @@ void GUI::displayFiles() {
 	/*Loops through every file in files map.*/
 	for (const auto& file : show()) {
 		/*If it's a directory...*/
-		if (Filesystem::isDir((path + '\\' + file).c_str())) {
-			displayButton
+		if (Filesystem::isDir((tempPath + '\\' + file).c_str())) {
+			/*Sets a button with its name. If pressed, it updates path,
+			clears files map for new files and increases depth flag.*/
+			displayWidget
 			(
 				file.c_str(),
 
-				[this, &file]() {
-					fs.newPath(path + '\\' + file);
+				[this, &file, &tempPath]() {
+					fs.newPath(tempPath + '\\' + file);
 					files.clear();
 					deep++;
+					path = tempPath + '\\' + file;
 				}
 			);
 		}
 
 		/*If it's a file...*/
-		else if (Filesystem::isFile((path + '\\' + file).c_str())) {
-			Codes& checker = files[path + '\\' + file];
+		else if (Filesystem::isFile((tempPath + '\\' + file).c_str())) {
+			Codes& checker = files[tempPath + '\\' + file];
 
 			/*Sets a checkbox with its name. Updates file's value in map.*/
-			if (ImGui::Checkbox(file.c_str(), (bool*)&checker)) {
-				/*Replaces action in file's value in map.*/
-				if ((bool*)checker)
-					checker = action;
-			}
+			displayWidget(
+				std::bind(ImGui::Checkbox, file.c_str(), (bool*)&checker),
+				[&checker, this]() {if ((bool)checker) checker = action; });
 
 			ImGui::NextColumn();
 		}
 	}
 	ImGui::Text("-----------------------------------");
-}
-
-/*Displays button to go back.*/
-inline void GUI::displayBackButton() {
-	/*When pressed, it calls fs.back(), which updates the path.*/
-	if (ImGui::ArrowButton("Back", ImGuiDir_Left) && deep) {
-		fs.back();
-		deep--;
-	}
 }
 
 /*Sets a new ImGUI frame and window.*/
@@ -297,45 +282,42 @@ const Codes GUI::checkStatus(void) {
 		/*Text input for new path.*/
 		displayPath();
 
-		ImGui::NewLine();
-		ImGui::NewLine();
+		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Text input for file format.*/
 		result = displayFormat();
 
-		ImGui::NewLine();
-		ImGui::NewLine();
+		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Actions for compression and decompression.*/
 		displayActions();
 
-		ImGui::NewLine();
-		ImGui::NewLine();
+		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Slider for threshold.*/
-		displayThreshold();
+		ImGui::Text("Compression threshold: ");
+		ImGui::SameLine();
+		ImGui::SliderFloat("-", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
 
-		ImGui::NewLine();
-		ImGui::NewLine();
+		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Files from path.*/
 		displayFiles();
 
-		ImGui::NewLine();
-		ImGui::NewLine();
+		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Back button.*/
-		displayBackButton();
+		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; }});
 
 		ImGui::SameLine();
 
 		/*Exit button.*/
-		displayButton("Exit", [&result]() {result = Codes::END; }, [&result]() {result = Codes::NOTHING; });
+		displayWidget("Exit", [&result]() {result = Codes::END; });
 
 		ImGui::SameLine();
 
 		/*Perform button.*/
-		displayButton("Perform", [this, &result]() {result = action; }, [&result]() {result = Codes::NOTHING; });
+		displayWidget("Perform", [this, &result]() {result = action; });
 
 		ImGui::End();
 
@@ -345,10 +327,17 @@ const Codes GUI::checkStatus(void) {
 	return result;
 }
 
-template <class F1, class F2>
-inline auto GUI::displayButton(const char* text, const F1& f1, const F2& f2) -> decltype(f1())
+template <class Widget, class F1, class F2>
+inline auto GUI::displayWidget(const Widget& widget, const F1& f1, const F2& f2) -> decltype(f1())
 {
-	if (ImGui::Button(text))
+	if (widget())
+		return f1();
+	return f2();
+}
+
+template <class F1, class F2>
+inline auto GUI::displayWidget(const char* txt, const F1& f1, const F2& f2)->decltype(f1()) {
+	if (ImGui::Button(txt))
 		return f1();
 	return f2();
 }
