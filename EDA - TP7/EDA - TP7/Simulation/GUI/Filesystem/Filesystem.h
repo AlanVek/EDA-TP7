@@ -20,7 +20,7 @@ public:
 	/*Static functions.*/
 	static bool isDir(const char*);
 	static bool isFile(const char*);
-	static const std::string currentPath(void);
+	static const std::string originalPath(void);
 private:
 
 	/*Data members.*/

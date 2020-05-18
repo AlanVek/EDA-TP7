@@ -116,7 +116,7 @@ bool Filesystem::isDir(const char* path) {
 }
 
 /*Returns current path.*/
-const std::string Filesystem::currentPath(void) {
+const std::string Filesystem::originalPath(void) {
 	return boost::filesystem::current_path().string();
 };
 

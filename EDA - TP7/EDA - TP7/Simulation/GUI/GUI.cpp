@@ -226,7 +226,7 @@ inline void GUI::displayPath() {
 	displayWidget("Go", [this]() {fs.newPath(path); });
 
 	ImGui::SameLine();
-	displayWidget("Reset path", [this]() {fs.newPath(fs.getPath()); });
+	displayWidget("Reset path", [this]() {path = fs.originalPath();  fs.newPath(path); });
 }
 
 /*Displays path and files/folders in path.*/
