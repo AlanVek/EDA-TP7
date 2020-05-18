@@ -200,6 +200,7 @@ inline void GUI::displayActions() {
 		updateActions();
 		force = true;
 	}
+	ImGui::SameLine();
 
 	/*Message with selected option.*/
 	ImGui::Text(("Selected: " + action_msg).c_str());
@@ -207,14 +208,14 @@ inline void GUI::displayActions() {
 
 /*Displays threshold slider.*/
 inline void GUI::displayThreshold() {
-	ImGui::Text("Compression threshold:   ");
+	ImGui::Text("Compression threshold: ");
 	ImGui::SameLine();
 	ImGui::SliderFloat(" - ", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
 }
 
 /*Displays text input for file format.*/
 inline Codes GUI::displayFormat() {
-	ImGui::Text("Compressed files format: ");
+	ImGui::Text("Compression format:    ");
 	ImGui::SameLine();
 	if (ImGui::InputText(" ~ ", &format) && format.length()) {
 		int point = format.find_last_of('.');
@@ -231,10 +232,11 @@ inline Codes GUI::displayFormat() {
 
 /*Displays text input for path.*/
 inline void GUI::displayPath() {
-	ImGui::Text("New path: ");
+	ImGui::Text("New path:              ");
 	ImGui::SameLine();
 	ImGui::InputText(" ", &path);
 
+	ImGui::SameLine();
 	if (ImGui::Button("Go"))
 		fs.newPath(path);
 
