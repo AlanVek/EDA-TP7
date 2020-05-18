@@ -6,9 +6,8 @@
 #include <allegro5/mouse.h>
 #include <allegro5/allegro_primitives.h>
 #include <functional>
-#include <ImgUtil.h>
 
-namespace GUI_data {
+namespace data {
 	const unsigned int width = 920;
 	const unsigned int height = 500;
 
@@ -20,7 +19,7 @@ namespace GUI_data {
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
 GUI::GUI(void) :
-	threshold(GUI_data::minThreshold),
+	threshold(data::minThreshold),
 	guiDisp(nullptr),
 	guiQueue(nullptr),
 	action(Codes::NOTHING),
@@ -54,7 +53,7 @@ void GUI::setAllegro() {
 	else if (!(guiQueue = al_create_event_queue()))
 		throw std::exception("Failed to create event queue.");
 
-	else if (!(guiDisp = al_create_display(GUI_data::width, GUI_data::height)))
+	else if (!(guiDisp = al_create_display(data::width, data::height)))
 		throw std::exception("Failed to create display.");
 
 	else {
@@ -89,7 +88,7 @@ void GUI::initialImGuiSetup(void) const {
 
 /*Checks if user pressed ESC or closed display.
 It also deals with display resizing.*/
-bool GUI::checkGUIEvents(void) {
+bool GUI::eventManager(void) {
 	bool result = false;
 
 	//Gets events.
@@ -109,6 +108,68 @@ bool GUI::checkGUIEvents(void) {
 			al_acknowledge_resize(guiDisp);
 			ImGui_ImplAllegro5_CreateDeviceObjects();
 		}
+	}
+	return result;
+}
+
+//Cycle that shows menu (called with every iteration).
+const Codes GUI::checkStatus(void) {
+	Codes result;
+
+	al_set_target_backbuffer(guiDisp);
+
+	//If user pressed ESC or closed display, returns Codes::END.
+	if (eventManager())
+		result = Codes::END;
+
+	else {
+		/*Sets new ImGui window.*/
+		newWindow();
+
+		/*Text input for new path.*/
+		displayPath();
+
+		ImGui::NewLine(); ImGui::NewLine();
+
+		/*Text input for file format.*/
+		result = displayFormat();
+
+		ImGui::NewLine(); ImGui::NewLine();
+
+		/*Actions for compression and decompression.*/
+		displayActions();
+
+		ImGui::NewLine(); ImGui::NewLine();
+
+		/*Slider for threshold.*/
+		ImGui::Text("Compression threshold: ");
+		ImGui::SameLine();
+		ImGui::SliderFloat("-", &threshold, data::minThreshold, data::maxThreshold);
+
+		ImGui::NewLine(); ImGui::NewLine();
+
+		/*Files from path.*/
+		displayFiles();
+
+		ImGui::NewLine(); ImGui::NewLine();
+
+		/*Back button.*/
+		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; }});
+
+		ImGui::SameLine();
+
+		/*Exit button.*/
+		displayWidget("Exit", [&result]() {result = Codes::END; });
+
+		ImGui::SameLine();
+
+		/*Perform button.*/
+		displayWidget("Perform", [this, &result]() {result = action; });
+
+		ImGui::End();
+
+		/*Rendering.*/
+		render();
 	}
 	return result;
 }
@@ -142,7 +203,7 @@ inline Codes GUI::displayFormat() {
 	ImGui::Text("Compression format:    ");
 	ImGui::SameLine();
 	int finder;
-	if (ImGui::InputText(" ~ ", &format, ImGuiInputTextFlags_CharsHexadecimal) && format.length()) {
+	if (ImGui::InputText(" ~ ", &format, ImGuiInputTextFlags_CharsNoBlank) && format.length()) {
 		finder = format.find_last_of('.');
 		format = '.' + format.substr(finder + 1, format.length());
 		force = true;
@@ -151,19 +212,18 @@ inline Codes GUI::displayFormat() {
 
 	return Codes::NOTHING;
 }
-#include <iostream>
+
 /*Displays text input for path.*/
 inline void GUI::displayPath() {
 	ImGui::Text("New path:              ");
 	ImGui::SameLine();
-	ImGui::InputText(" ", &path, ImGuiInputTextFlags_CharsHexadecimal);
+	ImGui::InputText(" ", &path);
 
 	ImGui::SameLine();
+	displayWidget("Go", [this]() {fs.newPath(path); });
 
-	displayWidget("Go", [this]() {std::cout << path << std::endl; fs.newPath(path); });/*std::bind(&Filesystem::newPath, &fs, std::cref(path))*/;
 	ImGui::SameLine();
-
-	displayWidget("Reset path", std::bind(&Filesystem::newPath, &fs, Filesystem::currentPath()));
+	displayWidget("Reset path", [this]() {fs.newPath(fs.getPath()); });
 }
 
 /*Displays path and files/folders in path.*/
@@ -176,19 +236,15 @@ void GUI::displayFiles() {
 	/*Shows path.*/
 	ImGui::TextWrapped(tempPath.c_str());
 
-	ImGui::NewLine();
-
 	/*'Select all' button.*/
-
-	displayWidget("Select All",
-		[this]() {for (auto& file : files)file.second = action; });
+	displayWidget("Select All", [this]() {for (auto& file : files)file.second = action; });
 
 	ImGui::SameLine();
 
-	displayWidget("Deselect all",
-		[this]() {for (auto& file : files) file.second = action; });
+	/*'Deselect all' button.*/
+	displayWidget("Deselect all", [this]() {for (auto& file : files) file.second = Codes::NOTHING; });
 
-	ImGui::NewLine();
+	//ImGui::NewLine();
 	ImGui::Text("-----------------------------------");
 	/*Loops through every file in files map.*/
 	for (const auto& file : show()) {
@@ -196,17 +252,14 @@ void GUI::displayFiles() {
 		if (Filesystem::isDir((tempPath + '\\' + file).c_str())) {
 			/*Sets a button with its name. If pressed, it updates path,
 			clears files map for new files and increases depth flag.*/
-			displayWidget
-			(
-				file.c_str(),
+			displayWidget(file.c_str(),
 
 				[this, &file, &tempPath]() {
 					fs.newPath(tempPath + '\\' + file);
 					files.clear();
 					deep++;
 					path = tempPath + '\\' + file;
-				}
-			);
+				});
 		}
 
 		/*If it's a file...*/
@@ -214,11 +267,8 @@ void GUI::displayFiles() {
 			Codes& checker = files[tempPath + '\\' + file];
 
 			/*Sets a checkbox with its name. Updates file's value in map.*/
-			displayWidget(
-				std::bind(ImGui::Checkbox, file.c_str(), (bool*)&checker),
+			displayWidget(std::bind(ImGui::Checkbox, file.c_str(), (bool*)&checker),
 				[&checker, this]() {if ((bool)checker) checker = action; });
-
-			ImGui::NextColumn();
 		}
 	}
 	ImGui::Text("-----------------------------------");
@@ -231,7 +281,7 @@ inline void GUI::newWindow() const {
 	ImGui::NewFrame();
 
 	//Sets new window positioned at (0,0).
-	ImGui::SetNextWindowSize(ImVec2(GUI_data::width, GUI_data::height));
+	ImGui::SetNextWindowSize(ImVec2(data::width, data::height));
 	ImGui::SetNextWindowPos(ImVec2(0, 0));
 
 	/*Begins window and sets title.*/
@@ -265,68 +315,7 @@ GUI::~GUI() {
 		al_destroy_display(guiDisp);
 }
 
-//Cycle that shows menu (called with every iteration).
-const Codes GUI::checkStatus(void) {
-	Codes result;
-
-	al_set_target_backbuffer(guiDisp);
-
-	//If user pressed ESC or closed display, returns Codes::END.
-	if (checkGUIEvents()) {
-		result = Codes::END;
-	}
-	else {
-		/*Sets new ImGui window.*/
-		newWindow();
-
-		/*Text input for new path.*/
-		displayPath();
-
-		ImGui::NewLine(); ImGui::NewLine();
-
-		/*Text input for file format.*/
-		result = displayFormat();
-
-		ImGui::NewLine(); ImGui::NewLine();
-
-		/*Actions for compression and decompression.*/
-		displayActions();
-
-		ImGui::NewLine(); ImGui::NewLine();
-
-		/*Slider for threshold.*/
-		ImGui::Text("Compression threshold: ");
-		ImGui::SameLine();
-		ImGui::SliderFloat("-", &threshold, GUI_data::minThreshold, GUI_data::maxThreshold);
-
-		ImGui::NewLine(); ImGui::NewLine();
-
-		/*Files from path.*/
-		displayFiles();
-
-		ImGui::NewLine(); ImGui::NewLine();
-
-		/*Back button.*/
-		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; }});
-
-		ImGui::SameLine();
-
-		/*Exit button.*/
-		displayWidget("Exit", [&result]() {result = Codes::END; });
-
-		ImGui::SameLine();
-
-		/*Perform button.*/
-		displayWidget("Perform", [this, &result]() {result = action; });
-
-		ImGui::End();
-
-		/*Rendering.*/
-		render();
-	}
-	return result;
-}
-
+/*Displays given widget and applies callback according to widget state.*/
 template <class Widget, class F1, class F2>
 inline auto GUI::displayWidget(const Widget& widget, const F1& f1, const F2& f2) -> decltype(f1())
 {
@@ -335,6 +324,9 @@ inline auto GUI::displayWidget(const Widget& widget, const F1& f1, const F2& f2)
 	return f2();
 }
 
+/*Specialization of displayWidget template.
+As ImGui::Button is the most used widget, when the given 'widget'
+is actually a const char*, then the widget will be ImGui::Button.*/
 template <class F1, class F2>
 inline auto GUI::displayWidget(const char* txt, const F1& f1, const F2& f2)->decltype(f1()) {
 	if (ImGui::Button(txt))
@@ -350,7 +342,7 @@ const std::vector<std::string>& GUI::show(const char* path) {
 
 	if (force) { force = !force; }
 	if (action == Codes::COMPRESS || action == Codes::NOTHING)
-		showFormat = GUI_data::fixedFormat;
+		showFormat = data::fixedFormat;
 	else
 		showFormat = format.c_str();
 

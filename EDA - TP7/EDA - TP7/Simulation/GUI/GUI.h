@@ -52,7 +52,7 @@ protected:
 	/*************************************************************************************************/
 
 	/*Exit and resize events.*/
-	bool checkGUIEvents(void);
+	bool eventManager(void);
 
 	/*Allegro data members.*/
 	/******************************/
