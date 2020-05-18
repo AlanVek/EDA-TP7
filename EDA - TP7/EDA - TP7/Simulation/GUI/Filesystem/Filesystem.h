@@ -3,13 +3,14 @@
 #include <string>
 
 using strVec = std::vector<std::string>;
+using variadicArgs = std::initializer_list<const char*>;
 
 class Filesystem {
 public:
 
 	Filesystem();
 
-	const strVec& pathContent(const char* = nullptr, bool = false, int = 0, ...);
+	const strVec& pathContent(const char* = nullptr, bool = false, const variadicArgs & = {});
 
 	void back();
 

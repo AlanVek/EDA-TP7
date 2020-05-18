@@ -223,7 +223,7 @@ inline void GUI::displayPath() {
 	ImGui::InputText(" ", &path);
 
 	ImGui::SameLine();
-	displayWidget("Go", [this]() {fs.newPath(path); });
+	displayWidget("Go", [this]() {fs.newPath(path); deep = 0; });
 
 	ImGui::SameLine();
 	displayWidget("Reset path", [this]() {path = fs.originalPath();  fs.newPath(path); });
@@ -344,10 +344,10 @@ const std::vector<std::string>& GUI::show(const char* path) {
 	const char* showFormat;
 
 	if (force) { force = !force; }
-	if (action == Codes::COMPRESS || action == Codes::NOTHING)
-		showFormat = data::fixedFormat;
-	else
+	if (action == Codes::DECOMPRESS)
 		showFormat = format.c_str();
+	else
+		showFormat = data::fixedFormat;
 
-	return fs.pathContent(path, shouldForce, 1, showFormat);
+	return fs.pathContent(path, shouldForce, { showFormat });
 }

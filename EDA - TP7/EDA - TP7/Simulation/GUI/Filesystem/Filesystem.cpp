@@ -1,6 +1,5 @@
 #include "Filesystem.h"
 #include <boost/filesystem.hpp>
-#include <stdarg.h>
 
 /*Filesystem constructor. Sets path to current path
 and loads this->path_content.*/
@@ -14,7 +13,7 @@ Filesystem::Filesystem() {
 /*Returns the contents of the given path. If none is given,
 it returns the contents of this->path. In both cases, if the variadic
 arguments are given, it filters files by format type of said arguments.*/
-const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count, ...)
+const strVec& Filesystem::pathContent(const char* imgPath, bool force, const variadicArgs& acceptedFormats)
 {
 	/*If mustUpdate is true, then path changed recently from another method.
 	If force is true, then the caller is forcing to reaload file info from path.
@@ -24,15 +23,8 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count
 		std::map<std::string, int> formats;
 
 		/*Gets format arguments (if any were given).*/
-		if (count) {
-			va_list args;
-			va_start(args, count);
-
-			for (int i = 0; i < count; i++)
-				formats[va_arg(args, const char*)] = 1;
-
-			va_end(args);
-		}
+		for (const auto& format : acceptedFormats)
+			formats[format] = 1;
 
 		/*Toggles mustUpdate.*/
 		if (mustUpdate) mustUpdate = !mustUpdate;
@@ -66,7 +58,7 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force, int count
 			argument, it saves it to path_content. Otherwise, it skips it.*/
 			for (boost::filesystem::directory_iterator itr(p); itr != boost::filesystem::directory_iterator(); itr++) {
 				/*Checks if it's either directory or a file with format given as argument.*/
-				loadCondition = !count || isDir(itr->path().string().c_str()) ||
+				loadCondition = !formats.size() || isDir(itr->path().string().c_str()) ||
 					(isFile(itr->path().string().c_str()) && formats.find(itr->path().extension().string()) != formats.end());
 
 				if (loadCondition)
