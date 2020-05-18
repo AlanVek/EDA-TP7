@@ -2,6 +2,7 @@
 #include "lodepng.h"
 
 /*Constants to use throughout program. */
+/********************************************/
 namespace {
 	const unsigned char alpha = 255;
 	const unsigned int maxDif = 3 * 255;
@@ -15,6 +16,7 @@ namespace treeData {
 		filling,
 	};
 }
+/********************************************/
 
 QuadTree::QuadTree() {};
 

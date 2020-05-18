@@ -7,6 +7,8 @@
 #include <allegro5/allegro_primitives.h>
 #include <functional>
 
+/*GUI data.*/
+/***************************************/
 namespace data {
 	const unsigned int width = 920;
 	const unsigned int height = 500;
@@ -16,6 +18,7 @@ namespace data {
 
 	const char* fixedFormat = ".png";
 }
+/***************************************/
 
 /*GUI constructor. Clears 'format' string and sets Allegro resources.*/
 GUI::GUI(void) :

@@ -4,6 +4,8 @@
 #include <map>
 #include "Filesystem/Filesystem.h"
 
+/*GUI event codes.*/
+/********************************/
 const enum class Codes : int {
 	NOTHING = 0,
 	END,
@@ -11,6 +13,7 @@ const enum class Codes : int {
 	COMPRESS,
 	DECOMPRESS
 };
+/********************************/
 
 class GUI {
 public:
