@@ -42,11 +42,11 @@ protected:
 	inline void displayThreshold();
 	void displayFiles();
 	inline void displayBackButton();
-	inline Codes displayExitButton() const;
-	inline Codes displayPerformButton() const;
-	inline void render() const;
 
-	inline void updateActions();
+	template <class F1, class F2 = void(*)(void)>
+	inline auto displayButton(const char* text, const F1& f1, const F2& f2 = []() {}) -> decltype(f1());
+
+	inline void render() const;
 
 	/*Exit and resize events.*/
 	bool checkGUIEvents(void);
@@ -69,4 +69,5 @@ protected:
 	/*File handling.*/
 	Filesystem fs;
 	std::map <std::string, Codes> files;
+	const std::vector<std::string>& show(const char* = nullptr);
 };

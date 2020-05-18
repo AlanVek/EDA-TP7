@@ -5,10 +5,12 @@
 #include <allegro5/keyboard.h>
 #include <allegro5/mouse.h>
 #include <allegro5/allegro_primitives.h>
+#include <functional>
+#include <ImgUtil.h>
 
 namespace GUI_data {
-	const unsigned int width = 900;
-	const unsigned int height = 550;
+	const unsigned int width = 920;
+	const unsigned int height = 500;
 
 	const float minThreshold = 0.1;
 	const float maxThreshold = 1;
@@ -111,95 +113,24 @@ bool GUI::checkGUIEvents(void) {
 	return result;
 }
 
-//Cycle that shows menu (called with every iteration).
-const Codes GUI::checkStatus(void) {
-	Codes result = Codes::NOTHING;
-	Codes temp;
-
-	al_set_target_backbuffer(guiDisp);
-
-	//If user pressed ESC or closed display, returns Codes::END.
-	if (checkGUIEvents()) {
-		result = Codes::END;
-	}
-	else {
-		/*Sets new ImGui window.*/
-		newWindow();
-
-		/*Text input for new path.*/
-		displayPath();
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		/*Text input for file format.*/
-		temp = displayFormat();
-		if ((bool)temp) result = temp;
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		/*Actions for compression and decompression.*/
-		displayActions();
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		/*Slider for threshold.*/
-		displayThreshold();
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		/*Files from path.*/
-		displayFiles();
-
-		ImGui::NewLine();
-		ImGui::NewLine();
-
-		/*Back button.*/
-		displayBackButton();
-
-		ImGui::SameLine();
-
-		/*Exit button.*/
-		temp = displayExitButton();
-		if ((bool)temp) result = temp;
-
-		ImGui::SameLine();
-
-		/*Perform button.*/
-		temp = displayPerformButton();
-		if ((bool)temp) result = temp;
-
-		ImGui::End();
-
-		/*Rendering.*/
-		render();
-	}
-	return result;
-}
-
 /*Displays action buttons.*/
 inline void GUI::displayActions() {
 	ImGui::Text("Action to perform: ");
 
-	/*Compress button.*/
-	if (ImGui::Button("Compress") && format.length()) {
-		action = Codes::COMPRESS;
-		action_msg = "compression.";
-		updateActions();
+	/*Button callback for both buttons.*/
+	const auto button_callback = [this](const Codes code, const char* msg) {
+		action = code;
+		action_msg = msg;
+		files.clear();
 		force = true;
-	}
+	};
+
+	/*Compress button.*/
+	displayButton("Compress", std::bind(button_callback, Codes::COMPRESS, "compression."));
+	ImGui::SameLine();
 
 	/*Decompress button.*/
-	ImGui::SameLine();
-	if (ImGui::Button("Decompress") && format.length()) {
-		action = Codes::DECOMPRESS;
-		action_msg = "decompression.";
-		updateActions();
-		force = true;
-	}
+	displayButton("Decompress", std::bind(button_callback, Codes::DECOMPRESS, "decompression."));
 	ImGui::SameLine();
 
 	/*Message with selected option.*/
@@ -217,13 +148,11 @@ inline void GUI::displayThreshold() {
 inline Codes GUI::displayFormat() {
 	ImGui::Text("Compression format:    ");
 	ImGui::SameLine();
-	if (ImGui::InputText(" ~ ", &format) && format.length()) {
-		int point = format.find_last_of('.');
-
-		format = '.' + format.substr(point + 1, format.length());
-
+	int finder;
+	if (ImGui::InputText(" ~ ", &format, ImGuiInputTextFlags_CharsHexadecimal) && format.length()) {
+		finder = format.find_last_of('.');
+		format = '.' + format.substr(finder + 1, format.length());
 		force = true;
-
 		return Codes::FORMAT;
 	}
 
@@ -234,81 +163,65 @@ inline Codes GUI::displayFormat() {
 inline void GUI::displayPath() {
 	ImGui::Text("New path:              ");
 	ImGui::SameLine();
-	ImGui::InputText(" ", &path);
+	if (ImGui::InputText("", &path, ImGuiInputTextFlags_CharsHexadecimal));
 
 	ImGui::SameLine();
-	if (ImGui::Button("Go"))
-		fs.newPath(path);
 
+	displayButton("Go", std::bind(&Filesystem::newPath, &fs, path));
 	ImGui::SameLine();
-	if (ImGui::Button("Reset path")) {
-		path = Filesystem::currentPath();
-		fs.newPath(path);
-	}
+
+	displayButton("Reset path", std::bind(&Filesystem::newPath, &fs, Filesystem::currentPath()));
 }
 
 /*Displays path and files/folders in path.*/
 void GUI::displayFiles() {
-	std::string tempPath = fs.getPath();
-
-	/*Binding fs.pathContent with this->force and specified file format.
-	Helps to determine when to update file info.*/
-	const auto show = [this](const char* path = nullptr) {
-		bool shouldForce = force;
-		const char* showFormat;
-		if (force) { force = !force; }
-		if (action == Codes::COMPRESS || action == Codes::NOTHING)
-			showFormat = GUI_data::fixedFormat;
-		else
-			showFormat = format.c_str();
-
-		return fs.pathContent(path, shouldForce, 1, showFormat);
-	};
+	path = fs.getPath();
 
 	ImGui::Text("Current path: ");
 	ImGui::SameLine();
 
 	/*Shows path.*/
-	ImGui::TextWrapped(tempPath.c_str());
+	ImGui::TextWrapped(path.c_str());
 
 	ImGui::NewLine();
 
 	/*'Select all' button.*/
-	if (ImGui::Button("Select all")) {
-		for (auto& file : files)
-			file.second = action;
-	}
+
+	displayButton("Select All",
+		[this]() {for (auto& file : files)file.second = action; });
+
 	ImGui::SameLine();
 
-	/*'Deselect all' button.*/
-	if (ImGui::Button("Deselect all")) {
-		for (auto& file : files)
-			file.second = Codes::NOTHING;
-	}
+	displayButton("Deselect all",
+		[this]() {for (auto& file : files) file.second = action; });
+
 	ImGui::NewLine();
 	ImGui::Text("-----------------------------------");
 	/*Loops through every file in files map.*/
 	for (const auto& file : show()) {
 		/*If it's a directory...*/
-		if (Filesystem::isDir((tempPath + '\\' + file).c_str())) {
-			/*Sets a button with its name.*/
-			if (ImGui::Button(file.c_str())) {
-				/*If the button is pressed, the path changes and
-				goes inside the folder.*/
-				show(file.c_str());
-				files.clear();
-				deep++;
-				tempPath += '\\' + file;
-			}
+		if (Filesystem::isDir((path + '\\' + file).c_str())) {
+			displayButton
+			(
+				file.c_str(),
+
+				[this, &file]() {
+					fs.newPath(path + '\\' + file);
+					files.clear();
+					deep++;
+				}
+			);
 		}
 
 		/*If it's a file...*/
-		else if (Filesystem::isFile((tempPath + '\\' + file).c_str())) {
+		else if (Filesystem::isFile((path + '\\' + file).c_str())) {
+			Codes& checker = files[path + '\\' + file];
+
 			/*Sets a checkbox with its name. Updates file's value in map.*/
-			if (ImGui::Checkbox(file.c_str(), (bool*)&files[tempPath + '\\' + file])) {
+			if (ImGui::Checkbox(file.c_str(), (bool*)&checker)) {
 				/*Replaces action in file's value in map.*/
-				if ((bool)files[tempPath + '\\' + file])
-					files[tempPath + '\\' + file] = action;
+				if ((bool*)checker)
+					checker = action;
 			}
 
 			ImGui::NextColumn();
@@ -324,24 +237,6 @@ inline void GUI::displayBackButton() {
 		fs.back();
 		deep--;
 	}
-}
-
-/*Displays exit button.*/
-inline Codes GUI::displayExitButton() const {
-	/*If pressed, it returns Codes::END.*/
-	if (ImGui::Button("Exit"))
-		return Codes::END;
-
-	return Codes::NOTHING;
-}
-
-/*Displays perform button.*/
-inline Codes GUI::displayPerformButton() const {
-	/*If pressed, it returns the corresponding action.*/
-	if (ImGui::Button("Perform"))
-		return action;
-
-	return Codes::NOTHING;
 }
 
 /*Sets a new ImGUI frame and window.*/
@@ -372,13 +267,6 @@ const std::string& GUI::getFormat(void) const { return format; }
 const float GUI::getThreshold(void) const { return threshold; }
 const std::map<std::string, Codes>& GUI::getFiles(void) const { return files; }
 
-/*Updates action in selected files.*/
-inline void GUI::updateActions() {
-	for (auto& file : files) {
-		file.second = Codes::NOTHING;
-	}
-}
-
 /*Toggles 'force' variable.*/
 void GUI::updateShowStatus() { force = !force; }
 
@@ -390,4 +278,92 @@ GUI::~GUI() {
 		al_destroy_event_queue(guiQueue);
 	if (guiDisp)
 		al_destroy_display(guiDisp);
+}
+
+//Cycle that shows menu (called with every iteration).
+const Codes GUI::checkStatus(void) {
+	Codes result;
+
+	al_set_target_backbuffer(guiDisp);
+
+	//If user pressed ESC or closed display, returns Codes::END.
+	if (checkGUIEvents()) {
+		result = Codes::END;
+	}
+	else {
+		/*Sets new ImGui window.*/
+		newWindow();
+
+		/*Text input for new path.*/
+		displayPath();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Text input for file format.*/
+		result = displayFormat();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Actions for compression and decompression.*/
+		displayActions();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Slider for threshold.*/
+		displayThreshold();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Files from path.*/
+		displayFiles();
+
+		ImGui::NewLine();
+		ImGui::NewLine();
+
+		/*Back button.*/
+		displayBackButton();
+
+		ImGui::SameLine();
+
+		/*Exit button.*/
+		displayButton("Exit", [&result]() {result = Codes::END; }, [&result]() {result = Codes::NOTHING; });
+
+		ImGui::SameLine();
+
+		/*Perform button.*/
+		displayButton("Perform", [this, &result]() {result = action; }, [&result]() {result = Codes::NOTHING; });
+
+		ImGui::End();
+
+		/*Rendering.*/
+		render();
+	}
+	return result;
+}
+
+template <class F1, class F2>
+inline auto GUI::displayButton(const char* text, const F1& f1, const F2& f2) -> decltype(f1())
+{
+	if (ImGui::Button(text))
+		return f1();
+	return f2();
+}
+
+/*Binding fs.pathContent with this->force and specified file format.
+Helps to determine when to update file info.*/
+const std::vector<std::string>& GUI::show(const char* path) {
+	bool shouldForce = force;
+	const char* showFormat;
+
+	if (force) { force = !force; }
+	if (action == Codes::COMPRESS || action == Codes::NOTHING)
+		showFormat = GUI_data::fixedFormat;
+	else
+		showFormat = format.c_str();
+
+	return fs.pathContent(path, shouldForce, 1, showFormat);
 }
