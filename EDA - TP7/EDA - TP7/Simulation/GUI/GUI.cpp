@@ -25,7 +25,7 @@ GUI::GUI(void) :
 	threshold(data::minThreshold),
 	guiDisp(nullptr),
 	guiQueue(nullptr),
-	action(Codes::NOTHING),
+	action(Events::NOTHING),
 	force(true),
 	deep(0),
 	action_msg("none.")
@@ -116,14 +116,14 @@ bool GUI::eventManager(void) {
 }
 
 //Cycle that shows menu (called with every iteration).
-const Codes GUI::checkStatus(void) {
-	Codes result;
+const Events GUI::checkStatus(void) {
+	Events result;
 
 	al_set_target_backbuffer(guiDisp);
 
-	//If user pressed ESC or closed display, returns Codes::END.
+	//If user pressed ESC or closed display, returns Events::END.
 	if (eventManager())
-		result = Codes::END;
+		result = Events::END;
 
 	else {
 		/*Sets new ImGui window.*/
@@ -162,7 +162,7 @@ const Codes GUI::checkStatus(void) {
 		ImGui::SameLine();
 
 		/*Exit button.*/
-		displayWidget("Exit", [&result]() {result = Codes::END; });
+		displayWidget("Exit", [&result]() {result = Events::END; });
 
 		ImGui::SameLine();
 
@@ -182,7 +182,7 @@ inline void GUI::displayActions() {
 	ImGui::Text("Action to perform: ");
 
 	/*Button callback for both buttons.*/
-	const auto button_callback = [this](const Codes code, const char* msg) {
+	const auto button_callback = [this](const Events code, const char* msg) {
 		action = code;
 		action_msg = msg;
 		files.clear();
@@ -190,11 +190,11 @@ inline void GUI::displayActions() {
 	};
 
 	/*Compress button.*/
-	displayWidget("Compress", std::bind(std::cref(button_callback), Codes::COMPRESS, "compression."));
+	displayWidget("Compress", std::bind(std::cref(button_callback), Events::COMPRESS, "compression."));
 	ImGui::SameLine();
 
 	/*Decompress button.*/
-	displayWidget("Decompress", std::bind(std::cref(button_callback), Codes::DECOMPRESS, "decompression."));
+	displayWidget("Decompress", std::bind(std::cref(button_callback), Events::DECOMPRESS, "decompression."));
 	ImGui::SameLine();
 
 	/*Message with selected option.*/
@@ -202,7 +202,7 @@ inline void GUI::displayActions() {
 }
 
 /*Displays text input for file format.*/
-inline Codes GUI::displayFormat() {
+inline Events GUI::displayFormat() {
 	ImGui::Text("Compression format:    ");
 	ImGui::SameLine();
 	int finder;
@@ -210,10 +210,10 @@ inline Codes GUI::displayFormat() {
 		finder = format.find_last_of('.');
 		format = '.' + format.substr(finder + 1, format.length());
 		force = true;
-		return Codes::FORMAT;
+		return Events::FORMAT;
 	}
 
-	return Codes::NOTHING;
+	return Events::NOTHING;
 }
 
 /*Displays text input for path.*/
@@ -245,7 +245,7 @@ void GUI::displayFiles() {
 	ImGui::SameLine();
 
 	/*'Deselect all' button.*/
-	displayWidget("Deselect all", [this]() {for (auto& file : files) file.second = Codes::NOTHING; });
+	displayWidget("Deselect all", [this]() {for (auto& file : files) file.second = Events::NOTHING; });
 
 	//ImGui::NewLine();
 	ImGui::Text("-----------------------------------");
@@ -267,11 +267,13 @@ void GUI::displayFiles() {
 
 		/*If it's a file...*/
 		else if (Filesystem::isFile((tempPath + '\\' + file).c_str())) {
-			Codes& checker = files[tempPath + '\\' + file];
+			Events& checker = files[tempPath + '\\' + file];
 
 			/*Sets a checkbox with its name. Updates file's value in map.*/
 			displayWidget(std::bind(ImGui::Checkbox, file.c_str(), (bool*)&checker),
-				[&checker, this]() {if ((bool)checker) checker = action; });
+				[&checker, this]() {
+					if ((bool)checker && format.length()) checker = action;
+					else checker = Events::NOTHING; });
 		}
 	}
 	ImGui::Text("-----------------------------------");
@@ -303,7 +305,7 @@ inline void GUI::render() const {
 /*Getters.*/
 const std::string& GUI::getFormat(void) const { return format; }
 const float GUI::getThreshold(void) const { return threshold; }
-const std::map<std::string, Codes>& GUI::getFiles(void) const { return files; }
+const std::map<std::string, Events>& GUI::getFiles(void) const { return files; }
 
 /*Toggles 'force' variable.*/
 void GUI::updateShowStatus() { force = !force; }
@@ -344,7 +346,7 @@ const std::vector<std::string>& GUI::show(const char* path) {
 	const char* showFormat;
 
 	if (force) { force = !force; }
-	if (action == Codes::DECOMPRESS)
+	if (action == Events::DECOMPRESS)
 		showFormat = format.c_str();
 	else
 		showFormat = data::fixedFormat;

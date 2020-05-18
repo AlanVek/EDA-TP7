@@ -9,25 +9,25 @@ Simulation::Simulation(void) : running(true)
 }
 
 //Polls GUI and dispatches according to button code.
-void Simulation::dispatch(const Codes& code) {
+void Simulation::dispatch(const Events& code) {
 	switch (code) {
 		/*User asked to exit.*/
-	case Codes::END:
+	case Events::END:
 		running = false;
 		break;
 
 		/*User asked to compress.*/
-	case Codes::COMPRESS:
+	case Events::COMPRESS:
 		compressFiles();
 		break;
 
 		/*User asked to decompress.*/
-	case Codes::DECOMPRESS:
+	case Events::DECOMPRESS:
 		decompressFiles();
 		break;
 
 		/*User changed target file format.*/
-	case Codes::FORMAT:
+	case Events::FORMAT:
 		setFormat();
 		break;
 	default:
@@ -36,7 +36,7 @@ void Simulation::dispatch(const Codes& code) {
 }
 
 /*Generates event from GUI.*/
-const Codes Simulation::eventGenerator() { return gui->checkStatus(); }
+const Events Simulation::eventGenerator() { return gui->checkStatus(); }
 
 /*Compresses files.*/
 void Simulation::compressFiles() {
@@ -46,9 +46,9 @@ void Simulation::compressFiles() {
 		int pos;
 
 		/*Loops through every file and crompressed the ones
-		marked with Codes::COMPRESS.*/
+		marked with Events::COMPRESS.*/
 		for (const auto& file : files) {
-			if (file.second == Codes::COMPRESS) {
+			if (file.second == Events::COMPRESS) {
 				pos = file.first.find_last_of(".");
 				qt->compressAndSave(file.first, file.first.substr(0, pos), gui->getThreshold());
 			}
@@ -68,9 +68,9 @@ void Simulation::decompressFiles() {
 		int pos;
 
 		/*Loops through every file and crompressed the ones
-		marked with Codes::DECOMPRESS.*/
+		marked with Events::DECOMPRESS.*/
 		for (const auto& file : files) {
-			if (file.second == Codes::DECOMPRESS) {
+			if (file.second == Events::DECOMPRESS) {
 				pos = file.first.find_last_of(".");
 				qt->decompressAndSave(file.first, file.first.substr(0, pos));
 			}

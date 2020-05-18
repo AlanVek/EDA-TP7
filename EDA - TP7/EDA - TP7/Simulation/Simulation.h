@@ -8,9 +8,9 @@ public:
 	Simulation(void);
 	~Simulation(void);
 
-	void dispatch(const Codes&);
+	void dispatch(const Events&);
 
-	const Codes eventGenerator();
+	const Events eventGenerator();
 
 	bool isRunning(void);
 

@@ -6,7 +6,7 @@
 
 /*GUI event codes.*/
 /********************************/
-const enum class Codes : int {
+const enum class Events : int {
 	NOTHING = 0,
 	END,
 	FORMAT,
@@ -22,12 +22,12 @@ public:
 
 	~GUI();
 
-	const Codes checkStatus(void);
+	const Events checkStatus(void);
 
 	const std::string& getFormat() const;
 	const float getThreshold() const;
 
-	const std::map<std::string, Codes>& getFiles(void) const;
+	const std::map<std::string, Events>& getFiles(void) const;
 	void updateShowStatus(void);
 protected:
 
@@ -41,7 +41,7 @@ protected:
 	/*************************************************************************************************/
 	inline void newWindow() const;
 	inline void displayPath();
-	inline Codes displayFormat();
+	inline Events displayFormat();
 	inline void displayActions();
 	void displayFiles();
 
@@ -69,7 +69,7 @@ protected:
 	bool force;
 	int deep;
 	std::string action_msg;
-	Codes action;
+	Events action;
 	/******************************/
 
 	/*Data members modifiable by user.*/
@@ -81,7 +81,7 @@ protected:
 	/*File handling.*/
 	/*************************************************************/
 	Filesystem fs;
-	std::map <std::string, Codes> files;
+	std::map <std::string, Events> files;
 	const std::vector<std::string>& show(const char* = nullptr);
 	/*************************************************************/
 };

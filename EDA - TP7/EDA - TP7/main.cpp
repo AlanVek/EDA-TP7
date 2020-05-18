@@ -7,7 +7,7 @@ int main() {
 		Simulation mySim;
 
 		/*Creates a GUI event*/
-		Codes ev;
+		Events ev;
 
 		/*While user hasn't asked to exit...*/
 		while (mySim.isRunning()) {
