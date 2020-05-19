@@ -10,6 +10,7 @@ namespace {
 	const unsigned int maxDif = 3 * maxVal;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
+	const char* imageFormat = "png";
 }
 namespace treeData {
 	const enum : const unsigned char {
@@ -20,10 +21,10 @@ namespace treeData {
 }
 /********************************************/
 
-QuadTree::QuadTree() : inputFile(nullptr), outputFile(nullptr), height(0), width(0), threshold(0), realsize(0) {};
+QuadTree::QuadTree() : inputFile(nullptr), outputFile(nullptr), height(0), width(0), threshold(0), realsize(0), index(0) {};
 
 /*QuadTree constructor. Saves format.*/
-QuadTree::QuadTree(const std::string& format) : inputFile(nullptr), outputFile(nullptr), height(0), width(0), threshold(0), realsize(0)
+QuadTree::QuadTree(const std::string& format) : inputFile(nullptr), outputFile(nullptr), height(0), width(0), threshold(0), realsize(0), index(0)
 {
 	setFormat(format);
 }
@@ -46,7 +47,7 @@ void QuadTree::setFormat(const std::string& format) {
 void QuadTree::compressAndSave(const std::string& input, const std::string& output, const double threshold) {
 	if (threshold > 0 && threshold <= 1) {
 		/*Transforms filenames into correct ones.*/
-		const std::string realInput = parse(input, "png");
+		const std::string realInput = parse(input, imageFormat);
 		const std::string realOutput = parse(output, format);
 
 		/*Sets threshold.*/
@@ -64,15 +65,9 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 
 		/*Encodes compressed inputFile.*/
 		encodeCompressed(realOutput);
-
-		/*Frees memory.*/
-		if (inputFile) {
-			free(inputFile);
-			inputFile = nullptr;
-		}
 	}
 	else
-		throw std::exception("Threshold must be a non-negative value between 0 and 1.");
+		throw std::exception("Threshold must be a non-negative value higher than 0 and up to 1.");
 }
 
 /*Decodes raw data from inputFile.*/
@@ -80,11 +75,11 @@ void QuadTree::decodeRaw(const std::string& fileName) {
 	/*Decodes inputFile and checks for errors.*/
 	int error = lodepng_decode32_file(&inputFile, &width, &height, fileName.c_str());
 	if (error) {
-		std::string errStr = "Failed to decode inputFile. Lodepng error: " + (std::string) lodepng_error_text(error);
+		std::string errStr = "Failed to decode file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
 	}
 	if (!inputFile)
-		throw std::exception("lodepng_decode32_file error.");
+		throw std::exception("Memory allocation for file failed.");
 
 	/*Sets real width.*/
 	width *= bytesPerPixel;
@@ -98,7 +93,7 @@ void QuadTree::checkData(void) const {
 
 	/*Checks if it's an empty array.*/
 	if (!(width * height))
-		throw std::exception("File is empty or doesn't exist.");
+		throw std::exception("File is empty.");
 
 	/*Checks if width is a power of 2.*/
 	if (floor(log2(width / bytesPerPixel)) != log2(width / bytesPerPixel))
@@ -114,7 +109,7 @@ void QuadTree::checkData(void) const {
 
 	/*Checks if vector has appropriate length.*/
 	if (width * height < bytesPerPixel) {
-		throw std::exception("Compress got invalid input.");
+		throw std::exception("Compress got invalid input. Expected at least one pixel.");
 	}
 }
 
@@ -159,8 +154,13 @@ void QuadTree::encodeCompressed(const std::string& fileName) {
 	/*Encodes tree in inputFile and checks for errors.*/
 	int error = lodepng_encode32_file(fileName.c_str(), tree.data() + offset, size / bytesPerPixel, 1);
 	if (error) {
-		std::string errStr = "Failed to encode compressed inputFile. Lodepng error: " + (std::string)lodepng_error_text(error);
+		std::string errStr = "Failed to encode compressed file. Lodepng error: " + (std::string)lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
+	}
+	/*Frees memory.*/
+	if (inputFile) {
+		free(inputFile);
+		inputFile = nullptr;
 	}
 }
 
@@ -170,7 +170,7 @@ Otherwise, it returns false.*/
 bool QuadTree::lessThanThreshold(const unsigned char* start, unsigned int W, unsigned int H) {
 	/*Checks for correct shape.*/
 	if (W * H < bytesPerPixel)
-		throw std::exception("lessThanThreshold got an invalid input.");
+		throw std::exception("Invalid input. Expected at least one pixel.");
 
 	/*Creates variables to use in function. Mexrgb saves max values of rgb and
 	minrgb saves min values of rgb.*/
@@ -211,7 +211,7 @@ bool QuadTree::lessThanThreshold(const unsigned char* start, unsigned int W, uns
 	value = 0;
 	/*Applies formula.*/
 	for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
-		value += maxrgb[i] - minrgb[i];
+		value += maxrgb.at(i) - minrgb.at(i);
 
 	return value <= threshold;
 }
@@ -221,7 +221,7 @@ according to the parameter 'which'.*/
 const unsigned char* QuadTree::getNewPosition(const unsigned char* start, unsigned int W, unsigned int H, unsigned int which) const {
 	/*Checks validity of input.*/
 	if (which < 0 || which >= divide || W < 0 || H < 0)
-		throw std::exception("Wrong input in getNewPosition.");
+		throw std::exception("Wrong image sequencing.");
 
 	/*If the vector is empty, it returns its start. It can't be cut.*/
 	if (!W || !H)
@@ -244,7 +244,7 @@ const unsigned char* QuadTree::getNewPosition(const unsigned char* start, unsign
 /*Decompresses the input inputFile and saves it to output inputFile. */
 void QuadTree::decompressAndSave(const std::string& input, const std::string& output) {
 	const std::string realInput = parse(input, format);
-	const std::string realOutput = parse(output, "png");
+	const std::string realOutput = parse(output, imageFormat);
 
 	/*Decodes compressed inputFile.*/
 	decodeCompressed(realInput);
@@ -258,19 +258,6 @@ void QuadTree::decompressAndSave(const std::string& input, const std::string& ou
 
 	/*Encodes raw data inputFile.*/
 	encodeRaw(realOutput);
-
-	/*Returns to original position.*/
-	inputFile -= index;
-
-	/*Frees memory.*/
-	if (inputFile) {
-		free(inputFile);
-		inputFile = nullptr;
-	}
-	if (outputFile) {
-		free(outputFile);
-		outputFile = nullptr;
-	}
 }
 
 /*Decodes compressed data from inputFile. */
@@ -280,12 +267,12 @@ void QuadTree::decodeCompressed(const std::string& fileName) {
 	/*Decodes data and checks for errors.*/
 	int error = lodepng_decode32_file(&inputFile, &width, &height, fileName.c_str());
 	if (error) {
-		std::string errStr = "Failed to decode compressed inputFile. Lodepng error: " + (std::string)lodepng_error_text(error);
+		std::string errStr = "Failed to decode compressed file. Lodepng error: " + (std::string)lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
 	}
 
 	if (!inputFile)
-		throw std::exception("lodepng_decode32_file error");
+		throw std::exception("Memory allocation for file failed.");
 
 	/*Sets real width.*/
 	width *= bytesPerPixel;
@@ -335,15 +322,28 @@ void QuadTree::decompress(unsigned char** ptr) {
 }
 
 /*Encodes raw data to outputFile.*/
-void QuadTree::encodeRaw(const std::string& fileName) const {
+void QuadTree::encodeRaw(const std::string& fileName) {
 	/*Sets size equal to width-height (in pixels) of the data.*/
 	unsigned int size = static_cast<unsigned int> (sqrt(realsize / bytesPerPixel));
 
 	/*Encodes data to outputFile and checks for errors.*/
 	int error = lodepng_encode32_file(fileName.c_str(), outputFile, size, size);
 	if (error) {
-		std::string errStr = "Failed to encode raw inputFile. Lodepng error: " + (std::string) lodepng_error_text(error);
+		std::string errStr = "Failed to encode raw file. Lodepng error: " + (std::string) lodepng_error_text(error);
 		throw std::exception(errStr.c_str());
+	}
+
+	/*Returns to original position.*/
+	inputFile -= index;
+
+	/*Frees memory.*/
+	if (inputFile) {
+		free(inputFile);
+		inputFile = nullptr;
+	}
+	if (outputFile) {
+		free(outputFile);
+		outputFile = nullptr;
 	}
 }
 
@@ -363,16 +363,13 @@ void QuadTree::fillDecompressedVector(const unsigned char* rgb, const std::vecto
 	unsigned int Col;
 
 	/*For each value of the absolut position...*/
-	unsigned int i = 0;
-	for (const auto& pos : absPosit)
-		/*for (unsigned int i = 0; i < absPosit.size(); i++*/ {
+	for (unsigned int i = 0; i < absPosit.size(); i++) {
 		/*There is a new division, therefore a new total size and new side lengths of the division.*/
 		Col = fullWidth / (unsigned int)(2 * pow(divide, i / 2.0));
 
 		/*So the current row/column changes accordingly. */
-		initCol += (pos % 2) * Col;
-		initRow += (pos / 2) * Col / bytesPerPixel;;
-		i++;
+		initCol += (absPosit.at(i) % 2) * Col;
+		initRow += (absPosit.at(i) / 2) * Col / bytesPerPixel;
 	}
 
 	/*For each row in the square to fill...*/

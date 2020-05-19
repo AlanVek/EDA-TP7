@@ -58,9 +58,6 @@ void Simulation::perform(const T& apply, const Events& ev) {
 				apply(file.first, file.first.substr(0, pos));
 			}
 		}
-
-		/*Tells GUI to update file list.*/
-		gui->updateShowStatus();
 	}
 	catch (std::exception& e) {
 		std::cout << e.what() << std::endl;
@@ -70,7 +67,6 @@ void Simulation::perform(const T& apply, const Events& ev) {
 /*Sets new QuadTree target format.*/
 void Simulation::setFormat() {
 	qt->setFormat(gui->getFormat());
-	gui->updateShowStatus();
 }
 
 /*Getter.*/

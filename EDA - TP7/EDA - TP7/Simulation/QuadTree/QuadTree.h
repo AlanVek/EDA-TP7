@@ -29,7 +29,7 @@ private:
 
 	/*Decompression*/
 	/***********************************************************************/
-	void encodeRaw(const std::string&) const;
+	void encodeRaw(const std::string&);
 	void decompress(unsigned char**);
 	void decodeCompressed(const std::string&);
 

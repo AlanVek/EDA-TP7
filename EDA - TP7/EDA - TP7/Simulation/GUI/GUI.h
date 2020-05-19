@@ -28,8 +28,7 @@ public:
 	const float getThreshold() const;
 
 	const std::map<std::string, Events>& getFiles(void) const;
-	void updateShowStatus(void);
-protected:
+private:
 
 	/*Initial setup.*/
 	/**********************************/

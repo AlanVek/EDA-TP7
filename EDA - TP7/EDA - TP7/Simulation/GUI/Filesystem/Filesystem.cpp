@@ -58,7 +58,7 @@ const strVec& Filesystem::pathContent(const char* imgPath, bool force, const var
 			argument, it saves it to path_content. Otherwise, it skips it.*/
 			for (boost::filesystem::directory_iterator itr(p); itr != boost::filesystem::directory_iterator(); itr++) {
 				/*Checks if it's either directory or a file with format given as argument.*/
-				loadCondition = !formats.size() || isDir(itr->path().string().c_str()) ||
+				loadCondition = isDir(itr->path().string().c_str()) ||
 					(isFile(itr->path().string().c_str()) && formats.find(itr->path().extension().string()) != formats.end());
 
 				if (loadCondition)

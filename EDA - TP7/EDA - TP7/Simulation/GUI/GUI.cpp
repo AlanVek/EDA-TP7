@@ -25,10 +25,10 @@ GUI::GUI(void) :
 	threshold(data::minThreshold),
 	guiDisp(nullptr),
 	guiQueue(nullptr),
-	action(Events::NOTHING),
+	action(Events::COMPRESS),
 	force(true),
 	deep(0),
-	action_msg("none.")
+	action_msg("compression.")
 {
 	format.clear();
 
@@ -190,11 +190,11 @@ inline void GUI::displayActions() {
 	};
 
 	/*Compress button.*/
-	displayWidget("Compress", std::bind(std::cref(button_callback), Events::COMPRESS, "compression."));
+	displayWidget("Compress", std::bind(button_callback, Events::COMPRESS, "compression."));
 	ImGui::SameLine();
 
 	/*Decompress button.*/
-	displayWidget("Decompress", std::bind(std::cref(button_callback), Events::DECOMPRESS, "decompression."));
+	displayWidget("Decompress", std::bind(button_callback, Events::DECOMPRESS, "decompression."));
 	ImGui::SameLine();
 
 	/*Message with selected option.*/
@@ -205,10 +205,8 @@ inline void GUI::displayActions() {
 inline Events GUI::displayFormat() {
 	ImGui::Text("Compression format:    ");
 	ImGui::SameLine();
-	int finder;
 	if (ImGui::InputText(" ~ ", &format, ImGuiInputTextFlags_CharsNoBlank) && format.length()) {
-		finder = format.find_last_of('.');
-		format = '.' + format.substr(finder + 1, format.length());
+		format = '.' + format.substr(format.find_last_of('.') + 1, format.length());
 		force = true;
 		return Events::FORMAT;
 	}
@@ -307,9 +305,6 @@ const std::string& GUI::getFormat(void) const { return format; }
 const float GUI::getThreshold(void) const { return threshold; }
 const std::map<std::string, Events>& GUI::getFiles(void) const { return files; }
 
-/*Toggles 'force' variable.*/
-void GUI::updateShowStatus() { force = !force; }
-
 /*Cleanup. Frees resources.*/
 GUI::~GUI() {
 	ImGui_ImplAllegro5_Shutdown();
@@ -346,8 +341,13 @@ const std::vector<std::string>& GUI::updateFiles(const char* path) {
 	const char* showFormat;
 
 	if (force) { force = !force; }
-	if (action == Events::DECOMPRESS)
-		showFormat = format.c_str();
+	if (action == Events::DECOMPRESS) {
+		if (format.length())
+			showFormat = format.c_str();
+
+		else
+			return fs.pathContent(path, shouldForce);
+	}
 	else
 		showFormat = data::fixedFormat;
 
