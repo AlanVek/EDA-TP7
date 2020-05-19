@@ -1,13 +1,7 @@
 #pragma once
-#include <vector>
-#include <string>
 #include <list>
-
-using charVector = std::vector<unsigned char>;
-using iterator = charVector::iterator;
-using intVector = std::vector<unsigned int>;
-using floatVector = std::vector<float>;
-
+#include <string>
+#include <vector>
 class QuadTree {
 public:
 	QuadTree();
@@ -23,32 +17,44 @@ public:
 private:
 
 	/*Compression*/
+	/***********************************************************************************************************/
 	void decodeRaw(const std::string&);
-	void checkData(void);
-	void compress(const iterator&, unsigned int, unsigned int);
+	void checkData(void) const;
+	void compress(const unsigned char*, unsigned int, unsigned int);
 	void encodeCompressed(const std::string&);
 
-	const iterator getNewPosition(const iterator&, unsigned int, unsigned int, unsigned int) const;
-	bool lessThanThreshold(const iterator&, unsigned int, unsigned int);
+	const unsigned char* getNewPosition(const unsigned char*, unsigned int, unsigned int, unsigned int) const;
+	bool lessThanThreshold(const unsigned char*, unsigned int, unsigned int);
+	/***********************************************************************************************************/
 
 	/*Decompression*/
+	/***********************************************************************/
 	void encodeRaw(const std::string&) const;
-	void decompress(iterator&);
+	void decompress(unsigned char**);
 	void decodeCompressed(const std::string&);
 
-	void fillDecompressedVector(int*, const intVector&);
+	void fillDecompressedVector(const unsigned char*, const std::list<unsigned int>&);
+	/***********************************************************************/
 
+	/*Data input verifier.*/
 	const std::string parse(const std::string&, const std::string&) const;
 
 	/*Prevents from using copy constructor.*/
 	QuadTree(const QuadTree&);
 
 	/*Data members.*/
-	charVector originalData, decompressed, tree;
+	/***********************************************/
 
-	floatVector mean;
+	/*Image info.*/
+	std::vector<unsigned char> tree;
+	std::vector<float> mean;
+	unsigned char* inputFile, * outputFile;
 
+	/*Flags.*/
+	unsigned int realsize, width, height, index;
+
+	/*User input.*/
 	double threshold;
-	unsigned int width, height;
 	std::string format;
+	/***********************************************/
 };
