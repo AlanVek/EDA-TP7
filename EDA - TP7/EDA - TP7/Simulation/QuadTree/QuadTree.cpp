@@ -253,6 +253,9 @@ void QuadTree::decompressAndSave(const std::string& input, const std::string& ou
 	unsigned char* substitute = inputFile;
 	decompress(&substitute);
 
+	/*Resets absolute position vector.*/
+	absPosit.clear();
+
 	/*Encodes raw data inputFile.*/
 	encodeRaw(realOutput);
 
@@ -302,9 +305,6 @@ void QuadTree::decodeCompressed(const std::string& fileName) {
 
 /*Decompresses data from vector. */
 void QuadTree::decompress(unsigned char** ptr) {
-	/*Sets static list to check for absolut position within data.*/
-	static std::list<unsigned int> absPosit;
-
 	/*If it found a leaf...*/
 	if (**ptr == treeData::noChildren) {
 		/*'Removes' flag from vector.*/
@@ -348,7 +348,7 @@ void QuadTree::encodeRaw(const std::string& fileName) const {
 }
 
 /*Fills a given portion of the decompressed vector.*/
-void QuadTree::fillDecompressedVector(const unsigned char* rgb, const std::list<unsigned int>& absPosit) {
+void QuadTree::fillDecompressedVector(const unsigned char* rgb, const std::vector<unsigned int>& absPosit) {
 	/*There is a new total amount of data corresponding to the portion to fill.
 	It depends on the depth of the leaf within the tree, which is equal to the
 	size of the absPosit vector. newWidth is the horizontal side of the square to fill.*/

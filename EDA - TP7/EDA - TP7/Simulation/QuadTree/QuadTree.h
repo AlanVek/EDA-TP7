@@ -1,7 +1,7 @@
 #pragma once
-#include <list>
 #include <string>
 #include <vector>
+
 class QuadTree {
 public:
 	QuadTree();
@@ -33,7 +33,7 @@ private:
 	void decompress(unsigned char**);
 	void decodeCompressed(const std::string&);
 
-	void fillDecompressedVector(const unsigned char*, const std::list<unsigned int>&);
+	void fillDecompressedVector(const unsigned char*, const std::vector<unsigned int>&);
 	/***********************************************************************/
 
 	/*Data input verifier.*/
@@ -47,6 +47,7 @@ private:
 
 	/*Image info.*/
 	std::vector<unsigned char> tree;
+	std::vector<unsigned int> absPosit;
 	std::vector<float> mean;
 	unsigned char* inputFile, * outputFile;
 
