@@ -3,16 +3,6 @@
 int main() {
 	int result = -1;
 
-	QuadTree qt("EDA");
-	try {
-		qt.compressAndSave("Simulation/QuadTree/Images/imagenfuego.png", "Simulation/QuadTree/Images/imagenfuego.EDA", 0.01);
-		qt.decompressAndSave("Simulation/QuadTree/Images/imagenfuego.EDA", "Simulation/QuadTree/Images/imagenfuego2.png");
-	}
-	catch (std::exception& e) {
-		std::cout << e.what() << std::endl;
-	}
-	return 0;
-
 	try {
 		Simulation mySim;
 
