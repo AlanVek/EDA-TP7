@@ -4,8 +4,10 @@
 /*Constants to use throughout program. */
 /********************************************/
 namespace {
-	const unsigned char alpha = 255;
-	const unsigned int maxDif = 3 * 255;
+	const unsigned char minVal = 0;
+	const unsigned char maxVal = 255;
+	const unsigned char alpha = maxVal;
+	const unsigned int maxDif = 3 * maxVal;
 	const unsigned int divide = 4;
 	const unsigned int bytesPerPixel = 4;
 }
@@ -56,7 +58,7 @@ void QuadTree::compressAndSave(const std::string& input, const std::string& outp
 		checkData();
 
 		/*Saves space for additional tree data and compresses file.*/
-		tree = charVector(bytesPerPixel, treeData::filling);
+		tree.assign(bytesPerPixel, treeData::filling);
 		compress(originalData.begin(), width, height);
 
 		/*Encodes compressed file.*/
@@ -174,11 +176,12 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 
 	/*Creates variables to use in function. Mexrgb saves max values of rgb and
 	minrgb saves min values of rgb.*/
-	mean = intVector(bytesPerPixel - 1);
-	intVector maxrgb(start, start + bytesPerPixel - 1);
-	intVector minrgb = maxrgb;
-	bool result = false;
+	mean.assign(bytesPerPixel - 1, 0);
+	intVector maxrgb(bytesPerPixel - 1, minVal);
+	intVector minrgb(bytesPerPixel - 1, maxVal);
 	int count = -1;
+
+	unsigned int value;
 
 	/*Loops through the portion of the vector, applying checks to each
 	value (is it the minimum? is it the maximum?).*/
@@ -186,7 +189,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 		for (unsigned int j = 0; j < W; j++) {
 			/*If it's not alpha...*/
 			if ((++count) != bytesPerPixel - 1) {
-				auto value = *(start + i * width + j);
+				value = *(start + i * width + j);
 
 				/*If value is higher than corresponding value
 				in maxrgb, it changes it.*/
@@ -199,7 +202,7 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 					minrgb[count] = value;
 
 				/*Updates mean.*/
-				mean[count] += value;
+				mean[count] += value * bytesPerPixel / (float)(W * H);
 			}
 			/*Resets count when it reached bytesPerPixel - 1.*/
 			else
@@ -207,19 +210,12 @@ bool QuadTree::lessThanThreshold(const iterator& start, unsigned int W, unsigned
 		}
 	}
 
-	unsigned int temp = 0;
-
+	value = 0;
 	/*Applies formula.*/
 	for (unsigned int i = 0; i < bytesPerPixel - 1; i++)
-		temp += maxrgb[i] - minrgb[i];
+		value += maxrgb[i] - minrgb[i];
 
-	/*Checks if formula is lower than threshold. */
-	if (temp <= threshold) {
-		for (int i = 0; i < bytesPerPixel - 1; i++)
-			mean[i] /= (W * H / bytesPerPixel);
-		result = true;
-	}
-	return result;
+	return value <= threshold;
 }
 
 /*Returns an iterator pointing to the start of a part of the given vector

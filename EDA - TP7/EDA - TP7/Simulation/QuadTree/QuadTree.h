@@ -1,10 +1,12 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <list>
 
 using charVector = std::vector<unsigned char>;
 using iterator = charVector::iterator;
 using intVector = std::vector<unsigned int>;
+using floatVector = std::vector<float>;
 
 class QuadTree {
 public:
@@ -43,7 +45,9 @@ private:
 
 	/*Data members.*/
 	charVector originalData, decompressed, tree;
-	intVector mean;
+
+	floatVector mean;
+
 	double threshold;
 	unsigned int width, height;
 	std::string format;

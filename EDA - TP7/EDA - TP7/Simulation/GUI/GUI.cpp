@@ -157,7 +157,7 @@ const Events GUI::checkStatus(void) {
 		ImGui::NewLine(); ImGui::NewLine();
 
 		/*Back button.*/
-		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; }});
+		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; path = fs.getPath(); }});
 
 		ImGui::SameLine();
 
@@ -250,7 +250,7 @@ void GUI::displayFiles() {
 	//ImGui::NewLine();
 	ImGui::Text("-----------------------------------");
 	/*Loops through every file in files map.*/
-	for (const auto& file : show()) {
+	for (const auto& file : updateFiles()) {
 		/*If it's a directory...*/
 		if (Filesystem::isDir((tempPath + '\\' + file).c_str())) {
 			/*Sets a button with its name. If pressed, it updates path,
@@ -341,7 +341,7 @@ inline auto GUI::displayWidget(const char* txt, const F1& f1, const F2& f2)->dec
 
 /*Binding fs.pathContent with this->force and specified file format.
 Helps to determine when to update file info.*/
-const std::vector<std::string>& GUI::show(const char* path) {
+const std::vector<std::string>& GUI::updateFiles(const char* path) {
 	bool shouldForce = force;
 	const char* showFormat;
 

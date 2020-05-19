@@ -82,6 +82,6 @@ protected:
 	/*************************************************************/
 	Filesystem fs;
 	std::map <std::string, Events> files;
-	const std::vector<std::string>& show(const char* = nullptr);
+	const std::vector<std::string>& updateFiles(const char* = nullptr);
 	/*************************************************************/
 };
