@@ -1,6 +1,6 @@
 #include "QuadTree.h"
 #include "lodepng.h"
-#include <iostream>
+
 /*Constants to use throughout program. */
 /********************************************/
 namespace {
