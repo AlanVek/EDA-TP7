@@ -74,7 +74,7 @@ private:
 	/*Data members modifiable by user.*/
 	/**********************************/
 	float threshold;
-	std::string format, path;
+	std::string format, path, showingFormat;
 	/**********************************/
 
 	/*File handling.*/

@@ -28,7 +28,8 @@ GUI::GUI(void) :
 	action(Events::COMPRESS),
 	force(true),
 	deep(0),
-	action_msg("compression.")
+	action_msg("compression."),
+	showingFormat(data::fixedFormat)
 {
 	format.clear();
 
@@ -154,7 +155,7 @@ const Events GUI::checkStatus(void) {
 		/*Files from path.*/
 		displayFiles();
 
-		ImGui::NewLine(); ImGui::NewLine();
+		ImGui::NewLine();
 
 		/*Back button.*/
 		displayWidget("<-", [this]() {if (deep) { fs.back(); deep--; path = fs.getPath(); }});
@@ -182,19 +183,20 @@ inline void GUI::displayActions() {
 	ImGui::Text("Action to perform: ");
 
 	/*Button callback for both buttons.*/
-	const auto button_callback = [this](const Events code, const char* msg) {
+	const auto button_callback = [this](const Events code, const char* msg, const std::string& newFormat) {
 		action = code;
 		action_msg = msg;
 		files.clear();
 		force = true;
+		showingFormat = newFormat;
 	};
 
 	/*Compress button.*/
-	displayWidget("Compress", std::bind(button_callback, Events::COMPRESS, "compression."));
+	displayWidget("Compress", std::bind(button_callback, Events::COMPRESS, "compression.", data::fixedFormat));
 	ImGui::SameLine();
 
 	/*Decompress button.*/
-	displayWidget("Decompress", std::bind(button_callback, Events::DECOMPRESS, "decompression."));
+	displayWidget("Decompress", std::bind(button_callback, Events::DECOMPRESS, "decompression.", format));
 	ImGui::SameLine();
 
 	/*Message with selected option.*/
@@ -208,6 +210,8 @@ inline Events GUI::displayFormat() {
 	if (ImGui::InputText(" ~ ", &format, ImGuiInputTextFlags_CharsNoBlank) && format.length()) {
 		format = '.' + format.substr(format.find_last_of('.') + 1, format.length());
 		force = true;
+		if (action == Events::DECOMPRESS)
+			showingFormat = format;
 		return Events::FORMAT;
 	}
 
@@ -236,6 +240,9 @@ void GUI::displayFiles() {
 
 	/*Shows path.*/
 	ImGui::TextWrapped(tempPath.c_str());
+
+	ImGui::NewLine();
+	ImGui::Text(("Showing format: " + showingFormat).c_str());
 
 	/*'Select all' button.*/
 	displayWidget("Select All", [this]() {for (auto& file : files)file.second = action; });
@@ -338,18 +345,8 @@ inline auto GUI::displayWidget(const char* txt, const F1& f1, const F2& f2)->dec
 Helps to determine when to update file info.*/
 const std::vector<std::string>& GUI::updateFiles(const char* path) {
 	bool shouldForce = force;
-	const char* showFormat;
 
 	if (force) { force = !force; }
-	if (action == Events::DECOMPRESS) {
-		if (format.length())
-			showFormat = format.c_str();
 
-		else
-			return fs.pathContent(path, shouldForce);
-	}
-	else
-		showFormat = data::fixedFormat;
-
-	return fs.pathContent(path, shouldForce, { showFormat });
+	return fs.pathContent(path, shouldForce, { showingFormat.c_str() });
 }
